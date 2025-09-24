@@ -1,0 +1,74 @@
+
+import { GoogleGenAI, Type } from "@google/genai";
+import { AnalysisResult, Sentiment } from '../types';
+
+const API_KEY = process.env.GEMINI_API_KEY;
+
+if (!API_KEY) {
+  throw new Error("GEMINI_API_KEY environment variable is not set");
+}
+
+const ai = new GoogleGenAI({ apiKey: API_KEY });
+
+const reviewSchema = {
+  type: Type.OBJECT,
+  properties: {
+    reviewText: {
+      type: Type.STRING,
+      description: "The original text of the product review."
+    },
+    sentiment: {
+      type: Type.STRING,
+      enum: [Sentiment.Positive, Sentiment.Negative, Sentiment.Neutral],
+      description: "The overall sentiment of the review."
+    },
+    topics: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.STRING,
+        description: "A specific topic discussed in the review, e.g., quality, shipping, price, customer service."
+      },
+      description: "A list of key topics mentioned in the review."
+    }
+  },
+  required: ["reviewText", "sentiment", "topics"]
+};
+
+export const analyzeReviews = async (reviews: string[]): Promise<AnalysisResult[]> => {
+  const reviewData = reviews.map(review => ({ reviewText: review }));
+  
+  const prompt = `
+    Analyze the following product reviews. For each review, determine its sentiment (Positive, Negative, or Neutral) 
+    and identify the main topics discussed (e.g., quality, shipping, price, customer service, packaging).
+    
+    Here are the reviews:
+    ${JSON.stringify(reviewData, null, 2)}
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: reviewSchema,
+        },
+      },
+    });
+
+    const jsonString = response.text;
+    const parsedResults = JSON.parse(jsonString);
+    
+    // Validate the parsed structure
+    if (!Array.isArray(parsedResults)) {
+        throw new Error("API response is not an array.");
+    }
+    
+    return parsedResults as AnalysisResult[];
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    throw new Error("Failed to analyze reviews with Gemini API.");
+  }
+};

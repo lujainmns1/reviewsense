@@ -1,0 +1,5 @@
+
+{
+  "name": "ReviewSense",
+  "description": "An intelligent web application that analyzes product reviews using sentiment analysis. Users can upload a CSV file or enter text manually to get insights into customer feedback, including sentiment scores, key topics, and an overall satisfaction rating."
+}

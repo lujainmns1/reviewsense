@@ -1,0 +1,10 @@
+# Core dependencies - let pip resolve conflicts
+fastapi
+uvicorn[standard]
+google-genai
+python-dotenv
+pandas
+pydantic
+python-multipart
+requests
+typing-extensions
