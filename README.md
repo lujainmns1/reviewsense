@@ -1,151 +1,318 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # ReviewSense
 
-An intelligent web application that analyzes product reviews using sentiment analysis and topic extraction powered by Google Gemini AI.
+A comprehensive AI-powered review analysis application that helps businesses and individuals analyze customer feedback using advanced natural language processing. The application provides sentiment analysis, topic extraction, and detailed insights from product reviews.
 
-## Features
+## 🚀 Features
 
-- **AI-Powered Analysis**: Uses Google Gemini AI to analyze review sentiment (Positive, Negative, Neutral)
-- **Topic Extraction**: Identifies key topics discussed in reviews (e.g., quality, shipping, price, customer service)
-- **Modern React Interface**: Clean and responsive user interface built with React and TypeScript
-- **Multiple Input Methods**: Support for both text input and CSV file uploads
-- **Real-time Processing**: Fast analysis with detailed results and insights
-- **Dual Architecture**: Choose between client-side or server-side AI processing
+- **Multi-Modal Analysis**: Support for both direct AI integration and backend API processing
+- **Sentiment Analysis**: Automatic classification of reviews as Positive, Negative, or Neutral
+- **Topic Extraction**: Intelligent identification of key topics and themes in reviews
+- **Modern UI**: Clean, responsive React-based interface with Tailwind CSS styling
+- **Multiple Backend Options**: Choose between FastAPI and Flask backends
+- **Real-time Processing**: Fast analysis with loading indicators and error handling
+- **Flexible Architecture**: Environment-based service selection for different deployment scenarios
 
-## Architecture Options
+## 🏗️ Architecture
 
-### Current Version (Client-Side Processing)
-- **Frontend**: React + TypeScript with direct Gemini API calls
-- **Processing**: Client-side analysis
-- **Port**: http://localhost:5173
-- **Setup**: Simple, no backend required
+ReviewSense consists of three main components:
 
-### Version 2 (Server-Side Processing)
-- **Frontend**: Same React interface
-- **Backend**: FastAPI with server-side Gemini processing
-- **Processing**: Server-side analysis for better security
-- **Port**: Frontend: 5173, Backend: 8000
-- **Setup**: Requires both frontend and backend
+### Frontend (React + TypeScript)
+- **Framework**: React 19 with TypeScript
+- **Build Tool**: Vite for fast development and optimized production builds
+- **UI Components**: Custom React components with modern styling
+- **State Management**: React hooks for component state
+- **Service Layer**: Modular service architecture supporting multiple AI providers
 
-## Project Structure
+### Backend Options
+
+#### FastAPI Backend (`reviewsense_version2/`)
+- **Framework**: FastAPI with async support
+- **AI Integration**: Google Gemini API for server-side processing
+- **Features**: Auto-generated API documentation, CORS support, health checks
+- **Deployment**: Production-ready with environment validation
+
+#### Flask Backend (`flask_review_analyzer/`)
+- **Framework**: Flask with traditional web patterns
+- **AI Integration**: Google Gemini API integration
+- **Features**: Template-based responses, static file serving
+- **Deployment**: Lightweight and easy to deploy
+
+## 📋 Prerequisites
+
+- **Node.js** (v16 or higher) for the frontend
+- **Python** (v3.8 or higher) for the backend
+- **Google Gemini API Key** for AI analysis functionality
+
+## 🛠️ Installation & Setup
+
+### Frontend Setup
+
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Start development server**:
+   ```bash
+   npm run dev
+   ```
+
+3. **Access the application**:
+   - Frontend: http://localhost:5173
+   - The application will be available in your browser
+
+### Backend Setup Options
+
+#### Option 1: FastAPI Backend (Recommended)
+
+1. **Navigate to the backend directory**:
+   ```bash
+   cd reviewsense_version2
+   ```
+
+2. **Run the automated setup**:
+   ```bash
+   python setup.py
+   ```
+   This will install dependencies, validate configuration, and start the server.
+
+3. **Or setup manually**:
+   ```bash
+   pip install -r requirements.txt
+   python main.py
+   ```
+
+4. **Access the API**:
+   - API Base: http://localhost:8000
+   - Interactive Docs: http://localhost:8000/docs
+   - Health Check: http://localhost:8000/health
+
+#### Option 2: Flask Backend
+
+1. **Navigate to the Flask directory**:
+   ```bash
+   cd flask_review_analyzer
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Configure environment**:
+   - Edit the `.env` file and set your `GEMINI_API_KEY`
+
+4. **Start the server**:
+   ```bash
+   python app.py
+   ```
+
+5. **Access the application**:
+   - Web Interface: http://localhost:5000
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+Create a `.env.local` file in the root directory for frontend configuration:
+
+```env
+REACT_APP_USE_BACKEND=true  # Set to true to use backend API, false for direct Gemini calls
+```
+
+For backend services, configure the following in their respective `.env` files:
+
+```env
+GEMINI_API_KEY=your_google_gemini_api_key_here
+```
+
+### Service Selection
+
+The frontend automatically selects the analysis service based on the `REACT_APP_USE_BACKEND` environment variable:
+
+- **Backend Mode** (`REACT_APP_USE_BACKEND=true`): Uses the FastAPI/Flask backend for analysis
+- **Direct Mode** (`REACT_APP_USE_BACKEND=false`): Makes direct calls to Google Gemini API
+
+## 🎯 Usage
+
+1. **Start the Application**:
+   - Launch the frontend: `npm run dev`
+   - Start your preferred backend service
+
+2. **Access the Interface**:
+   - Open http://localhost:5173 in your browser
+
+3. **Analyze Reviews**:
+   - Click "Get Started" on the home page
+   - Upload or paste product reviews
+   - Click "Analyze Reviews" to process
+   - View detailed sentiment analysis and topic extraction results
+
+4. **Review Results**:
+   - Each review is analyzed for sentiment (Positive/Negative/Neutral)
+   - Key topics and themes are automatically extracted
+   - Results are displayed in an easy-to-read format
+
+## 🔧 Development
+
+### Project Structure
 
 ```
 reviewsense/
-├── components/              # React components
-├── services/                # API integration services (TypeScript)
-├── types.ts                 # TypeScript type definitions
-├── *.tsx files              # Main application files
-├── package.json             # Node.js dependencies
-├── vite.config.ts           # Vite configuration
-├── reviewsense_version2/    # Version 2 with Python backend
-│   ├── main.py              # FastAPI backend
-│   ├── requirements.txt      # Python dependencies
-│   └── README.md            # Backend documentation
-└── README files and configuration
+├── components/           # React components
+├── services/            # API service layers
+├── reviewsense_version2/ # FastAPI backend
+├── flask_review_analyzer/ # Flask backend
+├── types.ts             # TypeScript type definitions
+└── package.json         # Frontend dependencies
 ```
 
-## Getting Started
+### Key Components
 
-**Prerequisites:** Node.js
+- **HomePage**: Landing page with application introduction
+- **UploadPage**: Review input interface with validation
+- **ResultsPage**: Analysis results display with formatting
+- **Loader**: Loading states and progress indicators
+- **Services**: Modular API integration (Gemini + Backend options)
 
-1. Install dependencies:
-    ```bash
-    npm install
-    ```
-2. Configure your API key in [.env.local](.env.local):
-    - Set `GEMINI_API_KEY` to your Google Gemini API key
-3. Run the development server:
-    ```bash
-    npm run dev
-    ```
-4. Open your browser and navigate to `http://localhost:5173`
+### Adding New Features
 
-## Running ReviewSense Version2 (Server-Side Processing)
+1. **Frontend Changes**:
+   - Add new components in the `components/` directory
+   - Update types in `types.ts` for new data structures
+   - Modify services in `services/` for new API endpoints
 
-**Prerequisites:** Node.js and Python 3.8+
+2. **Backend Changes**:
+   - FastAPI: Add new endpoints in `reviewsense_version2/main.py`
+   - Flask: Add new routes in `flask_review_analyzer/app.py`
+   - Update requirements files for new dependencies
 
-### Backend Setup
-1. Navigate to the Version2 directory:
-    ```bash
-    cd reviewsense_version2
-    ```
-2. **Quick setup (recommended)**:
-    ```bash
-    python setup.py
-    ```
-    This automated script will handle everything for you!
+## 🚀 Deployment
 
-3. **Or manual setup**:
-   - Install dependencies: `pip install -r requirements.txt`
-   - Configure API key in `.env` file
-   - Run: `python main.py`
+### Frontend Deployment
 
-4. Backend will be available at `http://localhost:8000`
-   - API docs: http://localhost:8000/docs
-   - Health check: http://localhost:8000/health
+1. **Build for production**:
+   ```bash
+   npm run build
+   ```
 
-### Frontend Setup (for Version2)
-1. Return to the main directory:
-    ```bash
-    cd ..
-    ```
-2. Install Node.js dependencies:
-    ```bash
-    npm install
-    ```
-3. Configure your API key in [.env.local](.env.local):
-    - Set `GEMINI_API_KEY` to your Google Gemini API key
-4. Run the development server:
-    ```bash
-    npm run dev
-    ```
-5. Frontend will be available at `http://localhost:5173`
+2. **Deploy the dist folder** to your web server or CDN
 
-**Note:** Version2 uses the same React frontend but calls the Python backend API instead of making direct Gemini calls.
+### Backend Deployment
 
-### Switching Between Versions
+#### FastAPI Deployment
+```bash
+# Production server
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+```
 
-To switch between the client-side and server-side processing:
+#### Flask Deployment
+```bash
+# Production server
+python app.py
+```
 
-1. **For Current Version (Client-side)**:
-   - Set `REACT_APP_USE_BACKEND=false` in `.env.local` (or remove the variable)
-   - Only the React frontend is needed
+## 🧪 Testing
 
-2. **For Version2 (Server-side)**:
-   - Set `REACT_APP_USE_BACKEND=true` in `.env.local`
-   - Set `REACT_APP_API_URL=http://localhost:8000` in `.env.local`
-   - Both frontend and backend must be running
+### Frontend Testing
+```bash
+# Add tests in future with a testing framework like Jest or Vitest
+npm test
+```
 
-## Usage
+### Backend Testing
+```bash
+# FastAPI: Use pytest for API endpoint testing
+pytest
 
-### Text Input
-1. Enter product reviews (one per line) in the text area
-2. Click "Analyze Reviews"
-3. View detailed sentiment analysis and topic extraction results
+# Flask: Use unittest for route testing
+python -m unittest
+```
 
-### CSV Upload
-1. Upload a CSV file containing reviews
-2. The system automatically detects review columns
-3. Process multiple reviews at once with batch analysis
+## 🤝 Contributing
 
-## API Integration
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-The application uses the Google Gemini AI API for natural language processing. Make sure your API key has the necessary permissions for text generation and analysis.
+## 📝 API Reference
 
-## Technologies Used
+### Analysis Endpoint (FastAPI)
+```http
+POST /analyze
+Content-Type: application/json
 
-### Current Version
-- **Frontend**: React, TypeScript, Vite
-- **AI**: Google Gemini AI
-- **Build Tool**: Vite
-- **Language**: TypeScript
+{
+  "reviews": ["Great product!", "Could be better"]
+}
+```
 
-### Version 2
-- **Frontend**: React, TypeScript, Vite
-- **Backend**: FastAPI, Python
-- **AI**: Google Gemini AI
-- **Validation**: Pydantic
-- **Server**: Uvicorn
+**Response**:
+```json
+[
+  {
+    "reviewText": "Great product!",
+    "sentiment": "Positive",
+    "topics": ["quality", "value"]
+  }
+]
+```
+
+### Health Check Endpoint
+```http
+GET /health
+```
+
+## 🔐 Security
+
+- API keys are stored in environment variables
+- CORS is configured for frontend-backend communication
+- Input validation and sanitization on all endpoints
+- Error messages don't expose sensitive system information
+
+## 📊 Performance
+
+- **Frontend**: Optimized React components with efficient re-rendering
+- **Backend**: Async processing for better concurrency
+- **AI Processing**: Batch processing for multiple reviews
+- **Caching**: Consider implementing Redis for result caching in production
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **API Connection Errors**:
+   - Verify backend services are running
+   - Check CORS configuration
+   - Validate API endpoints are accessible
+
+2. **Gemini API Issues**:
+   - Ensure valid API key is configured
+   - Check API quota and rate limits
+   - Verify network connectivity
+
+3. **Build Errors**:
+   - Clear node_modules and reinstall: `rm -rf node_modules && npm install`
+   - Update dependencies: `npm update`
+   - Check Node.js version compatibility
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- Google Gemini AI for powerful natural language processing
+- FastAPI and Flask communities for excellent web frameworks
+- React and TypeScript communities for modern frontend development
+- Vite for fast build tooling
+
+## 📞 Support
+
+For support, please create an issue in the GitHub repository or contact the development team.
+
+---
+
+**ReviewSense** - Transform customer feedback into actionable insights with AI-powered analysis.
