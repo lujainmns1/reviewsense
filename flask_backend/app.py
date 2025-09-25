@@ -160,8 +160,15 @@ if __name__ == '__main__':
     print("📚 Health check: http://localhost:5000/health")
     print("🔄 Press Ctrl+C to stop")
 
-    app.run(
-        host='0.0.0.0',
-        port=5000,
-        debug=True
-    )
+    # Get host and port from environment variables with defaults
+    host = os.getenv('FLASK_HOST', '0.0.0.0')
+    port = int(os.getenv('FLASK_PORT', 5000))
+    debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+
+    try:
+        app.run(host=host, port=port, debug=debug)
+    except KeyboardInterrupt:
+        logger.info("🛑 Server stopped by user")
+    except Exception as e:
+        logger.error(f"❌ Failed to start server: {e}")
+        raise
