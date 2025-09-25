@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ReviewSense Version2 Setup Script
+ReviewSense Backend Setup Script
 This script helps set up and run the FastAPI backend properly.
 """
 
@@ -65,7 +65,7 @@ def check_environment_file():
 
 def create_env_template():
     """Create a template .env file."""
-    env_content = """# ReviewSense Version2 Backend Configuration
+    env_content = """# ReviewSense Backend Configuration
 GEMINI_API_KEY=your_gemini_api_key_here
 
 # Optional: Custom server configuration
@@ -79,7 +79,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 def run_server():
     """Run the FastAPI server."""
-    print("\n🚀 Starting ReviewSense Version2 backend...")
+    print("\n🚀 Starting ReviewSense backend...")
     print("   Server will be available at: http://localhost:8000")
     print("   API documentation: http://localhost:8000/docs")
     print("   Press Ctrl+C to stop the server\n")
@@ -103,7 +103,7 @@ def run_server():
 
 def main():
     """Main setup function."""
-    print("🔧 ReviewSense Version2 Setup")
+    print("🔧 ReviewSense Backend Setup")
     print("=" * 40)
 
     # Check system requirements
@@ -114,7 +114,7 @@ def main():
 
     # Check if we're in the right directory
     if not Path("requirements.txt").exists():
-        print("❌ Please run this script from the reviewsense_version2 directory")
+        print("❌ Please run this script from the backend directory")
         sys.exit(1)
 
     # Install dependencies

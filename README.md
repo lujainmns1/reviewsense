@@ -14,7 +14,7 @@ A comprehensive AI-powered review analysis application that helps businesses and
 
 ## 🏗️ Architecture
 
-ReviewSense consists of three main components:
+ReviewSense consists of two main components:
 
 ### Frontend (React + TypeScript)
 - **Framework**: React 19 with TypeScript
@@ -23,19 +23,11 @@ ReviewSense consists of three main components:
 - **State Management**: React hooks for component state
 - **Service Layer**: Modular service architecture supporting multiple AI providers
 
-### Backend Options
-
-#### FastAPI Backend (`reviewsense_version2/`)
+### Backend (FastAPI)
 - **Framework**: FastAPI with async support
 - **AI Integration**: Google Gemini API for server-side processing
 - **Features**: Auto-generated API documentation, CORS support, health checks
 - **Deployment**: Production-ready with environment validation
-
-#### Flask Backend (`flask_review_analyzer/`)
-- **Framework**: Flask with traditional web patterns
-- **AI Integration**: Google Gemini API integration
-- **Features**: Template-based responses, static file serving
-- **Deployment**: Lightweight and easy to deploy
 
 ## 📋 Prerequisites
 
@@ -63,11 +55,11 @@ ReviewSense consists of three main components:
 
 ### Backend Setup Options
 
-#### Option 1: FastAPI Backend (Recommended)
+### Backend Setup (FastAPI)
 
 1. **Navigate to the backend directory**:
    ```bash
-   cd reviewsense_version2
+   cd backend
    ```
 
 2. **Run the automated setup**:
@@ -86,29 +78,6 @@ ReviewSense consists of three main components:
    - API Base: http://localhost:8000
    - Interactive Docs: http://localhost:8000/docs
    - Health Check: http://localhost:8000/health
-
-#### Option 2: Flask Backend
-
-1. **Navigate to the Flask directory**:
-   ```bash
-   cd flask_review_analyzer
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Configure environment**:
-   - Edit the `.env` file and set your `GEMINI_API_KEY`
-
-4. **Start the server**:
-   ```bash
-   python app.py
-   ```
-
-5. **Access the application**:
-   - Web Interface: http://localhost:5000
 
 ## ⚙️ Configuration
 
@@ -161,8 +130,7 @@ The frontend automatically selects the analysis service based on the `REACT_APP_
 reviewsense/
 ├── components/           # React components
 ├── services/            # API service layers
-├── reviewsense_version2/ # FastAPI backend
-├── flask_review_analyzer/ # Flask backend
+├── backend/             # FastAPI backend
 ├── types.ts             # TypeScript type definitions
 └── package.json         # Frontend dependencies
 ```
@@ -183,8 +151,7 @@ reviewsense/
    - Modify services in `services/` for new API endpoints
 
 2. **Backend Changes**:
-   - FastAPI: Add new endpoints in `reviewsense_version2/main.py`
-   - Flask: Add new routes in `flask_review_analyzer/app.py`
+   - Add new endpoints in `backend/main.py`
    - Update requirements files for new dependencies
 
 ## 🚀 Deployment
@@ -200,16 +167,9 @@ reviewsense/
 
 ### Backend Deployment
 
-#### FastAPI Deployment
 ```bash
 # Production server
 uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
-```
-
-#### Flask Deployment
-```bash
-# Production server
-python app.py
 ```
 
 ## 🧪 Testing
@@ -222,11 +182,8 @@ npm test
 
 ### Backend Testing
 ```bash
-# FastAPI: Use pytest for API endpoint testing
+# Use pytest for API endpoint testing
 pytest
-
-# Flask: Use unittest for route testing
-python -m unittest
 ```
 
 ## 🤝 Contributing
