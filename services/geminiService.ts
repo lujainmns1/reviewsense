@@ -2,13 +2,30 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult, Sentiment } from '../types';
 
-const API_KEY = process.env.GEMINI_API_KEY;
+
+
+//const API_KEY = process.env.GEMINI_API_KEY;
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 if (!API_KEY) {
   throw new Error("GEMINI_API_KEY environment variable is not set");
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
+
+/*const response = await fetch('http://localhost:5000/analyze', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ reviews: reviews }) // <- هنا نتأكد أن المتغير معروف
+});
+
+if (!response.ok) {
+  throw new Error(`Server error: ${response.statusText}`);
+}
+
+const parsedResults = await response.json();*/
+
+
 
 const reviewSchema = {
   type: Type.OBJECT,
@@ -72,3 +89,5 @@ export const analyzeReviews = async (reviews: string[]): Promise<AnalysisResult[
     throw new Error("Failed to analyze reviews with Gemini API.");
   }
 };
+
+
