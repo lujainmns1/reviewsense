@@ -1,6 +1,7 @@
 import { AnalysisResult } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+// Use relative path so dev server can proxy requests to the backend (avoids CORS in dev)
+const API_BASE_URL = process.env.Backend_URL || '';
 
 export const analyzeReviewsWithBackend = async (reviews: string[]): Promise<AnalysisResult[]> => {
   try {
@@ -10,6 +11,7 @@ export const analyzeReviewsWithBackend = async (reviews: string[]): Promise<Anal
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+
       },
       body: JSON.stringify({ reviews }),
     });

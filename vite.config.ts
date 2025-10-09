@@ -14,6 +14,18 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      server: {
+        host: true, // listen on all addresses (required for Codespaces)
+        proxy: {
+          // Proxy API calls during development to avoid CORS and Codespaces tunnel auth
+          '/analyze': {
+            target: 'http://127.0.0.1:5000',
+            changeOrigin: true,
+            secure: false,
+            rewrite: (path) => path.replace(/^\/analyze/, '/analyze')
+          }
+        }
       }
     };
 });

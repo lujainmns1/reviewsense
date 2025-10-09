@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 import google.generativeai as genai
 import os
@@ -17,13 +17,45 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Configure CORS
-CORS(app, origins=["http://localhost:5173", "http://localhost:3000"])
+# Configure CORS - Allow specific GitHub Codespace origin
+@app.after_request
+def after_request(response):
+    origin = request.headers.get('Origin')
+    if origin and '.app.github.dev' in origin:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
+
+CORS(app)
 
 # Helper function to detect Arabic text
 def is_arabic(text):
     """Check if text contains Arabic characters"""
     return bool(re.search(r'[\u0600-\u06FF]', text))
+
+
+# Helper to extract JSON array from AI responses that may include markdown fences
+def extract_json_array_from_text(text: str) -> str:
+    """Try to clean the AI response and extract a JSON array substring.
+
+    This removes markdown code fences (```json ... ```), any leading/trailing
+    whitespace, and returns the substring between the first '[' and the last ']'
+    if present. Otherwise returns the stripped text.
+    """
+    if not text:
+        return ''
+    t = text.strip()
+    # Remove fenced code blocks with optional language tag (e.g. ```json)
+    t = re.sub(r'^```(?:json)?\s*', '', t, flags=re.IGNORECASE)
+    t = re.sub(r'\s*```$', '', t)
+    # If the model returned other surrounding text, try to find the JSON array
+    start = t.find('[')
+    end = t.rfind(']')
+    if start != -1 and end != -1 and end > start:
+        return t[start:end+1]
+    return t
 
 # Initialize Gemini AI
 try:
@@ -32,15 +64,17 @@ try:
         raise ValueError("GEMINI_API_KEY not set properly")
 
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     logger.info("Gemini AI initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize Gemini: {e}")
     raise
 
-@app.route('/', methods=['GET'])
+@app.route('/', methods=['GET', 'OPTIONS'])
 def home():
     """API information endpoint"""
+    if request.method == 'OPTIONS':
+        return make_response('', 200)
     return jsonify({
         "message": "ReviewSense Flask API",
         "version": "1.0.0",
@@ -57,7 +91,7 @@ def health():
         "timestamp": datetime.utcnow().isoformat()
     })
 
-@app.route('/analyze', methods=['POST'])
+@app.route('/analyze', methods=['POST', 'OPTIONS'])
 def analyze_reviews():
     """Analyze product reviews using Google Gemini AI"""
     try:
@@ -138,10 +172,12 @@ def analyze_reviews():
             if not response.text:
                 return jsonify({"error": "No response from AI service"}), 502
 
-            # Parse JSON response
+            # Parse JSON response (sanitize possible markdown/code fences)
             import json
+            cleaned = extract_json_array_from_text(response.text)
+            logger.info(f"Cleaned AI response for parsing: {cleaned[:500]}")
             try:
-                results = json.loads(response.text.strip())
+                results = json.loads(cleaned)
             except json.JSONDecodeError as e:
                 logger.error(f"JSON parsing error: {e}")
                 logger.error(f"Raw response: {response.text}")
