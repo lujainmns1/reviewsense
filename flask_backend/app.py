@@ -7,7 +7,8 @@ import re
 from datetime import datetime
 from dotenv import load_dotenv
 from arabic_model_service import analyze_arabic_review
-
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+import torch 
 # Load environment variables
 load_dotenv()
 
@@ -215,6 +216,42 @@ def analyze_reviews():
     except Exception as e:
         logger.error(f"❌ Error in analyze_reviews: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
+# analyze_reviews using  tabularisai / multilingual-sentiment-analysis
+# @app.route('/multi_lang', methods=['GET'])
+def predict_sentiment(texts):
+    inputs = tokenizer(texts, return_tensors="pt", truncation=True, padding=True, max_length=512)
+    with torch.no_grad():
+        outputs = model(**inputs)
+    probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)
+    sentiment_map = {0: "Very Negative", 1: "Negative", 2: "Neutral", 3: "Positive", 4: "Very Positive"}
+    return [sentiment_map[p] for p in torch.argmax(probabilities, dim=-1).tolist()]
+
+# Global model and tokenizer for multilingual sentiment analysis
+MODEL_NAME = "tabularisai/multilingual-sentiment-analysis"
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
+@app.route('/multi_lang', methods=['GET'])
+def multi_lang():
+    """Test multilingual sentiment analysis using tabularisai/multilingual-sentiment-analysis"""
+    try:
+
+        texts = [
+            "I love this product! It works great and exceeds my expectations.",
+            "هذا المنتج سيء للغاية ولا يعمل كما هو معلن.",
+            "C'est un produit moyen, rien de spécial.",
+            "Das Produkt ist fantastisch und sehr nützlich.",
+            "El producto no cumple con lo prometido."
+        ]
+        for text, sentiment in zip(texts, predict_sentiment(texts)):
+            print(f"Text: {text}\nSentiment: {sentiment}\n")
+
+        results = [{"text": text, "sentiment": sentiment} for text, sentiment in zip(texts, predict_sentiment(texts))]
+        return jsonify(results)
+
+    except Exception as e:
+        logger.error(f"❌ Error in multi_lang: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
 
 if __name__ == '__main__':
     print("Starting ReviewSense Flask API...")
@@ -234,3 +271,4 @@ if __name__ == '__main__':
     except Exception as e:
         logger.error(f"❌ Failed to start server: {e}")
         raise
+
