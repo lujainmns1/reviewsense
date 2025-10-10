@@ -132,41 +132,33 @@ def analyze_reviews():
 
         logger.info(f"📝 Arabic reviews: {len(arabic_reviews)}, Non-Arabic reviews: {len(non_arabic_reviews)}")
 
-        # Process Arabic reviews with local model
-        arabic_results = []
-        for review in arabic_reviews:
-            sentiment_result = analyze_arabic_review(review)
-            arabic_results.append({
-                'reviewText': review,
-                'sentiment': sentiment_result['label'].capitalize(),  # POSITIVE -> Positive
-                'topics': []  # Arabic model doesn't extract topics yet
-            })
-
-        # Process non-Arabic reviews with Gemini
-        gemini_results = []
-        if non_arabic_reviews:
-            reviews_text = "\n".join([f"{i+1}. {review}" for i, review in enumerate(non_arabic_reviews)])
+        # Process all reviews (both Arabic and non-Arabic) with Gemini
+        all_results = []
+        if cleaned_reviews:  # Process all reviews together
+            reviews_text = "\n".join([f"{i+1}. {review}" for i, review in enumerate(cleaned_reviews)])
 
         prompt = f"""
-        Analyze the following product reviews. For each review, provide:
-        1. Sentiment: "Positive", "Negative", or "Neutral"
-        2. Key topics: List of main topics discussed (e.g., quality, price, shipping, customer service)
+       Analyze the following product reviews. For each review, determine its sentiment (Positive, Negative, or Neutral) 
+    and identify the main topics discussed (e.g., quality, shipping, price, customer service, packaging).
+        
+
 
         Return the results as a JSON array with this exact format:
         [
             {{
                 "reviewText": "original review text",
-                "sentiment": "Positive/Negative/Neutral",
+                "sentiment": "Positive/Neutral/Negative",
                 "topics": ["topic1", "topic2"]
             }}
         ]
 
         Reviews to analyze:
         {reviews_text}
+        Be concise and ensure the JSON is properly formatted.
         """
 
-        # Call Gemini API for non-Arabic reviews
-        if non_arabic_reviews:
+        # Call Gemini API for all reviews
+        if cleaned_reviews:
             response = model.generate_content(prompt)
 
             if not response.text:
@@ -187,7 +179,7 @@ def analyze_reviews():
             if not isinstance(results, list):
                 return jsonify({"error": "Response must be an array"}), 502
 
-            # Ensure we have results for all non-Arabic reviews
+            # Process all reviews
             for i, result in enumerate(results):
                 if not isinstance(result, dict):
                     continue
@@ -205,19 +197,19 @@ def analyze_reviews():
                 if not isinstance(topics, list):
                     topics = []
 
-                gemini_results.append({
+                all_results.append({
                     'reviewText': review_text,
                     'sentiment': sentiment,
                     'topics': topics
                 })
 
-        # Combine results: Arabic first, then non-Arabic
-        validated_results = arabic_results + gemini_results
+        # Use results directly since we processed all reviews together
+        validated_results = all_results
 
         if not validated_results:
             return jsonify({"error": "No valid analysis results"}), 502
 
-        logger.info(f"✅ Successfully analyzed {len(validated_results)} reviews ({len(arabic_results)} Arabic, {len(gemini_results)} others)")
+        logger.info(f"✅ Successfully analyzed {len(validated_results)} reviews ({len(arabic_reviews)} Arabic, {len(non_arabic_reviews)} others)")
         return jsonify(validated_results)
 
     except Exception as e:
