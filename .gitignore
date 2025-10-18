@@ -36,12 +36,7 @@ instance/
 /reviewsense_env/
 env/
 /nlp-sentiment-analysis-pretarined-models/venv/
-**/venv/
-**/**/vnev/
-**/env/
-**/**/ENV/
-**/__pycache__/
-**/*.pyc
+
 ENV/
 env.bak/
 venv.bak/

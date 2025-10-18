@@ -1,0 +1,13 @@
+torch
+transformers
+pandas>=2.0.0
+numpy>=1.25.0
+scikit-learn>=1.3.0
+tqdm>=4.66.0
+matplotlib>=3.8.0
+plotly>=5.20.0
+seaborn
+arabic-reshaper
+python-bidi>=0.4.2
+jupyter>=1.0.0
+openpyxl
