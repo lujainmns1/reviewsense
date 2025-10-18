@@ -31,5 +31,51 @@ instance/
 .pytest_cache/
 .coverage
 /flask_backend/myEnv
+/flask_backend/__pycache__/
+/flask_backend/*.pyc
+/reviewsense_env/
+env/
+/nlp-sentiment-analysis-pretarined-models/venv/
+**/venv/
+**/**/vnev/
+**/env/
+**/**/ENV/
+**/__pycache__/
+**/*.pyc
+ENV/
+env.bak/
+venv.bak/
+*.sqlite3
+*.db
+*.sqlite
+*.egg-info/
 
+# Ignore all __pycache__ directories recursively
+__pycache__/
 
+# Ignore Python bytecode files
+*.py[cod]
+
+# Ignore virtual environments
+venv/
+env/
+
+# Ignore log files and temporary files
+*.log
+*.tmp
+
+# Ignore IDE/editor-specific files
+.vscode/
+.idea/
+*.swp
+
+# Ignore compiled files
+*.so
+*.dll
+*.dylib
+*.o
+*.a
+
+# Ignore test result files
+*.coverage
+*.pytest_cache/
