@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React,{useState , useEffect} from 'react';
 import { AnalysisResult, Sentiment } from '../types';
 import StarIcon from './icons/StarIcon';
 
@@ -8,6 +8,7 @@ interface ResultsPageProps {
   onAnalyzeAnother: () => void;
 }
 
+
 const sentimentColors: { [key in Sentiment]: { bg: string; text: string; border: string } } = {
   [Sentiment.Positive]: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-400' },
   [Sentiment.Negative]: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-400' },
@@ -15,6 +16,8 @@ const sentimentColors: { [key in Sentiment]: { bg: string; text: string; border:
 };
 
 const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother }) => {
+  const [sentimentCounts,setSentimentCounts]= React.useState<{ [key in Sentiment]?: number }>({});
+  console.log('Rendering ResultsPage with results:', results);
   if (results.length === 0) {
     return (
       <div className="text-center p-8 bg-white rounded-2xl shadow-xl">
@@ -26,16 +29,21 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother }) 
     );
   }
 
-  const sentimentCounts = results.reduce((acc, result) => {
-    acc[result.sentiment] = (acc[result.sentiment] || 0) + 1;
-    return acc;
-  }, {} as { [key in Sentiment]?: number });
+  useEffect(() => {
+    const counts = results.reduce((acc, result) => {
+      acc[result.sentiment] = (acc[result.sentiment] || 0) + 1;
+      return acc;
+    }, {} as { [key in Sentiment]?: number });
+    setSentimentCounts(counts);
+  }
+  , [results]);
 
   const positivePercentage = (sentimentCounts[Sentiment.Positive] || 0) / results.length;
   const starRating = Math.max(1, Math.ceil(positivePercentage * 5));
-
+  console.log('Sentiment counts:', sentimentCounts);
   const SummaryCard: React.FC<{ title: string; count: number; colorClass: string }> = ({ title, count, colorClass }) => (
-    <div className={`p-4 rounded-lg text-center ${colorClass}`}>
+   console.log('Rendering SummaryCard:', title, count),
+   <div className={`p-4 rounded-lg text-center ${colorClass}`}>
       <p className="text-3xl font-bold">{count}</p>
       <p className="text-sm font-medium">{title}</p>
     </div>
@@ -55,9 +63,9 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother }) 
                 ))}
             </div>
         </div>
-        <SummaryCard title="Positive Reviews" count={sentimentCounts.Positive || 0} colorClass="bg-green-100 text-green-800" />
-        <SummaryCard title="Negative Reviews" count={sentimentCounts.Negative || 0} colorClass="bg-red-100 text-red-800" />
-        <SummaryCard title="Neutral Reviews" count={sentimentCounts.Neutral || 0} colorClass="bg-yellow-100 text-yellow-800" />
+        <SummaryCard title="Positive Reviews" count={sentimentCounts[Sentiment.Positive] || 0} colorClass="bg-green-100 text-green-800" />
+        <SummaryCard title="Negative Reviews" count={sentimentCounts[Sentiment.Negative] || 0} colorClass="bg-red-100 text-red-800" />
+        <SummaryCard title="Neutral Reviews" count={sentimentCounts[Sentiment.Neutral] || 0} colorClass="bg-yellow-100 text-yellow-800" />
       </div>
 
       {/* Results Table */}
@@ -82,7 +90,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother }) 
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     <div className="flex flex-wrap gap-2">
                         {result.topics.length > 0 ? result.topics.map((topic, i) => (
-                            <span key={i} className="px-2 py-1 bg-slate-200 text-slate-700 rounded-md text-xs">{topic}</span>
+                            <span key={i} className="px-2 py-1 bg-slate-200 text-slate-700 rounded-md text-xs">{topic.topic}</span>
                         )) : <span>-</span>}
                     </div>
                 </td>

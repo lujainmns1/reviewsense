@@ -40,7 +40,7 @@ def analyze_arabic_review(text):
         cleaned_text = clean_arabic_text(text)
         if not cleaned_text:
             return {"label": "NEUTRAL", "score": 0.5}
-
+        
         result = arabic_pipeline(cleaned_text)[0]
 
         # Map labels to standard format

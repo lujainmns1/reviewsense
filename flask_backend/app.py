@@ -1,4 +1,6 @@
+# reviewsense/flask_backend/app.py
 from flask import Flask, request, jsonify, make_response
+import requests
 from flask_cors import CORS
 import google.generativeai as genai
 import os
@@ -252,6 +254,80 @@ def multi_lang():
         logger.error(f"❌ Error in multi_lang: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+ANALYSIS_MICROSERVICE_URL = "http://127.0.0.1:5001/analyze"  # URL of the microservice
+
+@app.route('/analyze_micro_service', methods=["POST"])
+def analyze_using_micro_service():
+    try:
+        data = request.get_json()
+        if not data or 'reviews' not in data:
+            return jsonify({"error": "No reviews provided"}), 400
+
+        reviews = data.get('reviews', [])
+        # You can also let the user choose the model from the frontend
+        model_to_use = data.get('model') 
+
+        if not isinstance(reviews, list) or not reviews:
+            return jsonify({"error": "Reviews must be a non-empty list"}), 400
+        
+        # We assume this endpoint is only for Arabic reviews as per your logic
+        # You could add a check here if needed.
+        
+        logger.info(f"📝 Forwarding {len(reviews)} reviews to microservice using model '{model_to_use}'")
+
+        results = []
+        for review_text in reviews:
+            if not isinstance(review_text, str) or not review_text.strip():
+                continue # Skip empty reviews
+
+            payload = {
+                "text": review_text,
+                "model": model_to_use
+            }
+
+            try:
+                # Set a timeout for the request to avoid waiting forever
+                response = requests.post(ANALYSIS_MICROSERVICE_URL, json=payload, timeout=30)
+                
+                # Check for successful response
+                if response.status_code == 200:
+                    results.append(response.json())
+                else:
+                    # Log the error and add a placeholder result
+                    error_info = response.json() if response.content else {"error": "Unknown microservice error"}
+                    logger.error(f"❌ Microservice error for review '{review_text[:50]}...': {response.status_code} - {error_info}")
+                    results.append({
+                        "original_text": review_text,
+                        "error": f"Failed to analyze: {error_info.get('error', 'Service unavailable')}",
+                        "status_code": response.status_code
+                    })
+                    
+            except requests.exceptions.RequestException as e:
+                # Handle connection errors, timeouts, etc.
+                logger.error(f"❌ Could not connect to microservice: {e}")
+                results.append({
+                    "original_text": review_text,
+                    "error": "Microservice is unreachable.",
+                    "status_code": 503 # Service Unavailable
+                })
+
+        logger.info(f"✅ Successfully processed {len(results)} reviews via microservice.")
+        logger.info(f"Microservice results: {results}")
+        # restructure the result: { reviewText: string; sentiment: Sentiment; topics: string[]; }
+        structured_results = []
+        for res in results:
+            if "original_text" in res and "sentiment" in res and "topics" in res:
+                structured_results.append({
+                    "reviewText": res["original_text"],
+                    "sentiment": res["sentiment"]["label"],
+                    "topics": res["topics"]
+                })
+
+        return jsonify(structured_results)
+
+    except Exception as e:
+        logger.error(f"❌ Unhandled error in /analyze_micro_service: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
     print("Starting ReviewSense Flask API...")
@@ -262,13 +338,14 @@ if __name__ == '__main__':
     # Get host and port from environment variables with defaults
     host = os.getenv('FLASK_HOST', '0.0.0.0')
     port = int(os.getenv('FLASK_PORT', 5000))
-    debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+    # debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
 
     try:
-        app.run(host=host, port=port, debug=debug)
+        app.run(host=host, port=port, debug=False)
     except KeyboardInterrupt:
         logger.info("🛑 Server stopped by user")
     except Exception as e:
         logger.error(f"❌ Failed to start server: {e}")
         raise
 
+        

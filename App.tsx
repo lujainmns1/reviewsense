@@ -21,7 +21,7 @@ const App: React.FC = () => {
     setAnalysisResults([]);
   };
 
-  const handleAnalyze = useCallback(async (reviews: string[]) => {
+  const handleAnalyze = useCallback(async (reviews: string[], model: string) => {
     if (reviews.length === 0) {
       setError("Please provide at least one review to analyze.");
       return;
@@ -32,7 +32,7 @@ const App: React.FC = () => {
     setCurrentPage(Page.Results);
 
     try {
-      const results = await analyzeReviews(reviews);
+      const results = await analyzeReviews(reviews, model);
       setAnalysisResults(results);
     } catch (e) {
       console.error(e);

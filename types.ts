@@ -6,9 +6,9 @@ export enum Page {
 }
 
 export enum Sentiment {
-  Positive = 'Positive',
-  Negative = 'Negative',
-  Neutral = 'Neutral',
+  Positive = 'positive',
+  Negative = 'negative',
+  Neutral = 'neutral',
 }
 
 export interface AnalysisResult {

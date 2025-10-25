@@ -3,17 +3,17 @@ import { AnalysisResult } from '../types';
 // Use relative path so dev server can proxy requests to the backend (avoids CORS in dev)
 const API_BASE_URL = process.env.Backend_URL || '';
 
-export const analyzeReviewsWithBackend = async (reviews: string[]): Promise<AnalysisResult[]> => {
+export const analyzeReviewsWithBackend = async (reviews: string[], model: string): Promise<AnalysisResult[]> => {
   try {
     console.log('Using backend API for analysis');
 
-    const response = await fetch(`${API_BASE_URL}/analyze`, {
+    const response = await fetch(`${API_BASE_URL}/analyze_micro_service`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
 
       },
-      body: JSON.stringify({ reviews }),
+      body: JSON.stringify({ reviews, model }),
     });
 
     if (!response.ok) {

@@ -2,12 +2,13 @@
 import React, { useState, useCallback } from 'react';
 
 interface UploadPageProps {
-  onAnalyze: (reviews: string[]) => void;
+  onAnalyze: (reviews: string[], model: string) => void;
   error: string | null;
 }
 
 const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
   const [reviewsText, setReviewsText] = useState('');
+  const [model, setModel] = useState('arabert-arsas-sa');
   const [fileName, setFileName] = useState('');
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,17 +26,26 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
     }
   }, []);
 
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     const reviews = reviewsText.split('\n').map(line => line.trim()).filter(line => line);
-    onAnalyze(reviews);
+    onAnalyze(reviews,model);
   };
 
   return (
     <div className="w-full max-w-3xl p-8 bg-white rounded-2xl shadow-xl">
       <h2 className="text-3xl font-bold text-center text-slate-800 mb-2">Provide Your Reviews</h2>
       <p className="text-center text-slate-500 mb-8">Upload a CSV file or paste your reviews into the text box below.</p>
-
+      {/* chose model */}
+      <div className="mb-4">
+        <label htmlFor="model" className="block text-sm font-medium text-slate-700 mb-1">Choose Analysis Model</label>
+        <select id="model" name="model" className="block w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-primary focus:outline-none" value={model} onChange={(e) => setModel(e.target.value)}>
+          <option value="arabert-arsas-sa">Default Model(AraBERTv2 ArSAS (Positive/Neutral/Negative/Mixed))</option>
+          <option value="marbertv2-book-review-sa">MARBERTv2 Book Review (Positive/Neutral/Negative)</option>
+          <option value="xlm-roberta-twitter-sa">XLM-RoBERTa Twitter (Multilingual)</option>
+        </select>
+      </div>
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">{error}</div>}
 
       <form onSubmit={handleSubmit}>
@@ -51,6 +61,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
             <input id="file-upload" name="file-upload" type="file" className="sr-only" accept=".csv" onChange={handleFileChange} />
             {fileName && <p className="text-sm text-slate-500 mt-3">{fileName}</p>}
           </div>
+
 
           <div className="flex items-center text-slate-400">OR</div>
 
