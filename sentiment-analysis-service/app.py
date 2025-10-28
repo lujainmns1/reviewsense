@@ -21,19 +21,31 @@ logger = logging.getLogger(__name__)
 
 # Optional deps; server can start without them, but inference will require them.
 try:
+    import torch
     from transformers import (
         AutoModelForSequenceClassification,
         AutoTokenizer,
         AutoModel,
         pipeline,
     )
-    import torch
     import langdetect
     import yake
     from scipy.spatial.distance import cosine
     logger.info("All optional dependencies loaded successfully")
+    
+    # Detailed GPU information
+    if torch.cuda.is_available():
+        logger.info(f"CUDA is available. Found {torch.cuda.device_count()} GPU(s)")
+        for i in range(torch.cuda.device_count()):
+            logger.info(f"GPU {i}: {torch.cuda.get_device_name(i)}")
+        # Set default device to GPU
+        torch.cuda.set_device(0)
+        logger.info(f"Using GPU: {torch.cuda.current_device()}")
+    else:
+        logger.info("CUDA not available, using CPU")
 except ImportError as e:
-    logger.warning(f"Some optional dependencies not available: {e}")
+    logger.error(f"Critical dependency not available: {e}")
+    logger.error("Please ensure all requirements are installed: pip install -r requirements.txt")
     AutoModelForSequenceClassification = None  # type: ignore
     AutoTokenizer = None  # type: ignore
     AutoModel = None  # type: ignore
@@ -154,8 +166,14 @@ class SentimentModel:
         logger.info(f"Loading sentiment model: {self.model_id}")
         start_time = datetime.now()
 
-        device = 0 if torch and torch.cuda.is_available() else -1
-        logger.info(f"Using device: {'cuda' if device == 0 else 'cpu'}")
+        # Force CUDA device if available
+        if torch and torch.cuda.is_available():
+            device = 0
+            torch.cuda.set_device(device)
+            logger.info(f"Using GPU device {device}: {torch.cuda.get_device_name(device)}")
+        else:
+            device = -1
+            logger.info("Using CPU device")
 
         # Avoid SentencePiece fast-tokenizer conversion for XLM-R/Cardiff
         needs_slow = ("xlm-roberta" in self.model_id) or ("cardiffnlp" in self.model_id)
@@ -671,22 +689,39 @@ def preload_models():
     In a low-memory environment like a default Codespace,
     we only load ONE sentiment model to prevent crashing.
     """
-    # CHOOSE ONE MODEL to preload. The others will be loaded on-demand,
-    # which might still crash, but it won't crash on startup.
-    # The best practice is to only use one and comment out the others.
+    try:
+        import torch
+        import transformers
+        logger.info(f"torch version: {torch.__version__}")
+        logger.info(f"transformers version: {transformers.__version__}")
+        
+        if torch.cuda.is_available():
+            logger.info(f"CUDA is available. Using GPU: {torch.cuda.get_device_name(0)}")
+        else:
+            logger.info("CUDA is not available. Using CPU")
+            
+    except ImportError as e:
+        logger.error(f"Failed to import core dependencies: {e}")
+        logger.error("Please ensure torch and transformers are installed correctly")
+        return
+
+    if not AutoModelForSequenceClassification or not AutoTokenizer or not pipeline:
+        logger.error("Transformers components not available. Please ensure the package is installed correctly.")
+        return
+
+    # Load one primary model for sentiment analysis
+    models_to_preload = ["arabert-arsas-sa"]  # Using the smaller AraBERT model
     
-    # models_to_preload = ["arabert-arsas-sa","marbertv2-book-review-sa",""] # Or any other models
-    # models_to_preload = ["arabert-arsas-sa"] # Or any other models
-    
-    # print("Pre-loading selected sentiment models...")
-    # for model_name in models_to_preload:
-    #     if model_name in AVAILABLE_MODELS:
-    #         model = AVAILABLE_MODELS[model_name]
-    #         try:
-    #             model.load()
-    #             print(f"  - Successfully loaded '{model_name}'")
-    #         except Exception as e:
-    #             print(f"  - FAILED to load '{model_name}': {e}")
+    logger.info("Pre-loading selected sentiment models...")
+    for model_name in models_to_preload:
+        if model_name in AVAILABLE_MODELS:
+            model = AVAILABLE_MODELS[model_name]
+            try:
+                model.load()
+                logger.info(f"Successfully loaded '{model_name}'")
+            except Exception as e:
+                logger.error(f"FAILED to load '{model_name}': {e}")
+                logger.error("Please verify transformers installation and model availability")
     
     # print("\nPre-loading dialect detection model...")
     # try:

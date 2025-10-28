@@ -4,9 +4,10 @@ transformers==4.35.2
 # Supporting NLP Libraries
 langdetect==1.0.9
 yake==0.4.8
+scipy>=1.11.0
 
 # Essential Dependencies for Transformers
 # sentencepiece is required for tokenizers in models like XLM-RoBERTa
-sentencepiece==0.1.99
+sentencepiece>=0.1.99
 # accelerate helps transformers manage model loading and device placement efficiently
 accelerate==0.25.0
