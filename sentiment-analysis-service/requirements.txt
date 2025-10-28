@@ -7,6 +7,6 @@ yake==0.4.8
 
 # Essential Dependencies for Transformers
 # sentencepiece is required for tokenizers in models like XLM-RoBERTa
-sentencepiece==0.1.99
 # accelerate helps transformers manage model loading and device placement efficiently
 accelerate==0.25.0
+scipy>=1.11.0

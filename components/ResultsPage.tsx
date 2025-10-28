@@ -70,7 +70,6 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother, mo
                 )}
               </div>
             )}
-                                Detected Dialect: {detectedDialect}
 
             <h3 className="text-lg font-semibold text-slate-700 mb-2">Overall Rating</h3>
             <div className="flex">

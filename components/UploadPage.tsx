@@ -78,7 +78,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
         <div className="mb-4">
           <label className="block text-sm font-medium text-slate-700 mb-2">Dialect Detection</label>
           <div className="flex items-center mb-4">
-            <input
+            {/* <input
               id="autoDetect"
               type="checkbox"
               checked={autoDetectDialect}
@@ -87,7 +87,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
             />
             <label htmlFor="autoDetect" className="ml-2 block text-sm text-slate-700">
               Auto-detect dialect
-            </label>
+            </label> */}
           </div>
 
           {!autoDetectDialect && (
@@ -97,7 +97,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
                   key={country.code}
                   type="button"
                   onClick={() => setSelectedCountry(country.code)}
-                  className={'flex items-center p-2 rounded-lg border ' + 
+                  className={'flex items-center p-2 rounded-lg border ' +
                     (selectedCountry === country.code
                       ? 'border-primary bg-blue-50'
                       : 'border-slate-200 hover:border-primary') +
@@ -146,8 +146,9 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
 
         <div className="mt-8 text-center">
           <button
+            disabled={selectedCountry === null || selectedCountry === ''}
             type="submit"
-            className="w-full md:w-auto bg-primary text-white font-bold py-3 px-12 rounded-full hover:bg-blue-800 transition-all duration-300 transform hover:scale-105 shadow-lg"
+            className={`w-full md:w-auto text-white font-bold py-3 px-12 rounded-full transition-all duration-300 transform shadow-lg ${selectedCountry == null ? 'bg-gray-200 cursor-not-allowed' : 'bg-primary hover:bg-blue-800 hover:scale-105'}`}
           >
             Analyze Reviews
           </button>

@@ -1,0 +1,5 @@
+Collecting scipy
+  Downloading scipy-1.16.3-cp312-cp312-win_amd64.whl.metadata (60 kB)
+Requirement already satisfied: numpy<2.6,>=1.25.2 in c:\users\hp\downloads\reviewsense\.venv\lib\site-packages (from scipy) (2.3.4)
+Downloading scipy-1.16.3-cp312-cp312-win_amd64.whl (38.6 MB)
+   ---------------------                    20.7/38.6 MB 208.6 kB/s eta 0:01:26
