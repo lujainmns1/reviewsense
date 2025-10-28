@@ -32,7 +32,16 @@ try:
     import yake
     from scipy.spatial.distance import cosine
     logger.info("All optional dependencies loaded successfully")
-    if not torch.cuda.is_available():
+    
+    # Detailed GPU information
+    if torch.cuda.is_available():
+        logger.info(f"CUDA is available. Found {torch.cuda.device_count()} GPU(s)")
+        for i in range(torch.cuda.device_count()):
+            logger.info(f"GPU {i}: {torch.cuda.get_device_name(i)}")
+        # Set default device to GPU
+        torch.cuda.set_device(0)
+        logger.info(f"Using GPU: {torch.cuda.current_device()}")
+    else:
         logger.info("CUDA not available, using CPU")
 except ImportError as e:
     logger.error(f"Critical dependency not available: {e}")
@@ -157,8 +166,14 @@ class SentimentModel:
         logger.info(f"Loading sentiment model: {self.model_id}")
         start_time = datetime.now()
 
-        device = 0 if torch and torch.cuda.is_available() else -1
-        logger.info(f"Using device: {'cuda' if device == 0 else 'cpu'}")
+        # Force CUDA device if available
+        if torch and torch.cuda.is_available():
+            device = 0
+            torch.cuda.set_device(device)
+            logger.info(f"Using GPU device {device}: {torch.cuda.get_device_name(device)}")
+        else:
+            device = -1
+            logger.info("Using CPU device")
 
         # Avoid SentencePiece fast-tokenizer conversion for XLM-R/Cardiff
         needs_slow = ("xlm-roberta" in self.model_id) or ("cardiffnlp" in self.model_id)
