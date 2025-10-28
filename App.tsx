@@ -9,7 +9,12 @@ import { Page, AnalysisResult } from './types';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.Home);
-  const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
+  const [analysisResults, setAnalysisResults] = useState<{
+    results: AnalysisResult[];
+    model: string;
+    selectedCountry?: string;
+    detectedDialect?: string;
+  }>({ results: [], model: '', selectedCountry: undefined, detectedDialect: undefined });
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,10 +23,10 @@ const App: React.FC = () => {
   const handleStart = () => {
     setCurrentPage(Page.Upload);
     setError(null);
-    setAnalysisResults([]);
+    setAnalysisResults({ results: [], model: '', selectedCountry: undefined });
   };
 
-  const handleAnalyze = useCallback(async (reviews: string[], model: string) => {
+  const handleAnalyze = useCallback(async (reviews: string[], model: string, country?: string, autoDetectDialect?: boolean) => {
     if (reviews.length === 0) {
       setError("Please provide at least one review to analyze.");
       return;
@@ -32,8 +37,14 @@ const App: React.FC = () => {
     setCurrentPage(Page.Results);
 
     try {
-      const results = await analyzeReviews(reviews, model);
-      setAnalysisResults(results);
+      const results = await analyzeReviews(reviews, model, country, autoDetectDialect);
+      console.log('Results from analyzeReviews:', results);
+      setAnalysisResults({
+        results: results.results,
+        model: results.model,
+        selectedCountry: results.selectedCountry || country,
+        detectedDialect: results.detectedDialect
+      });
     } catch (e) {
       console.error(e);
       setError("An error occurred during analysis. Please check your API configuration and try again.");
@@ -55,7 +66,15 @@ const App: React.FC = () => {
       case Page.Upload:
         return <UploadPage onAnalyze={handleAnalyze} error={error} />;
       case Page.Results:
-        return <ResultsPage results={analysisResults} onAnalyzeAnother={handleStart} />;
+        return (
+          <ResultsPage 
+            results={analysisResults.results} 
+            model={analysisResults.model}
+            selectedCountry={analysisResults.selectedCountry} 
+            detectedDialect={analysisResults.detectedDialect}
+            onAnalyzeAnother={handleStart}
+          />
+        );
       default:
         return <HomePage onStart={handleStart} />;
     }

@@ -2,9 +2,13 @@
 import React,{useState , useEffect} from 'react';
 import { AnalysisResult, Sentiment } from '../types';
 import StarIcon from './icons/StarIcon';
+import Flag from 'react-world-flags';
 
 interface ResultsPageProps {
   results: AnalysisResult[];
+  model: string;
+  selectedCountry?: string;
+  detectedDialect?: string;
   onAnalyzeAnother: () => void;
 }
 
@@ -15,7 +19,7 @@ const sentimentColors: { [key in Sentiment]: { bg: string; text: string; border:
   [Sentiment.Neutral]: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-400' },
 };
 
-const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother }) => {
+const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother, model, selectedCountry, detectedDialect }) => {
   const [sentimentCounts,setSentimentCounts]= React.useState<{ [key in Sentiment]?: number }>({});
   console.log('Rendering ResultsPage with results:', results);
   if (results.length === 0) {
@@ -51,11 +55,23 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother }) 
 
   return (
     <div className="w-full max-w-6xl p-8 bg-white rounded-2xl shadow-xl">
-      <h2 className="text-3xl font-bold text-center text-slate-800 mb-6">Analysis Results</h2>
+      <h2 className="text-3xl font-bold text-center text-slate-800 mb-6">Analysis Results Using Model : <b><u>{model}</u></b></h2> 
 
       {/* Summary Section */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="md:col-span-1 p-4 bg-slate-50 rounded-lg flex flex-col items-center justify-center">
+            {selectedCountry && (
+              <div className="flex flex-col items-center gap-2 mb-3">
+                <Flag code={selectedCountry} className="w-8 h-6 object-cover rounded shadow-sm" />
+                {detectedDialect && (
+                  <div className="text-sm text-slate-600 mt-1">
+                    Detected Dialect: {detectedDialect}
+                  </div>
+                )}
+              </div>
+            )}
+                                Detected Dialect: {detectedDialect}
+
             <h3 className="text-lg font-semibold text-slate-700 mb-2">Overall Rating</h3>
             <div className="flex">
                 {[...Array(5)].map((_, i) => (
@@ -90,7 +106,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother }) 
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     <div className="flex flex-wrap gap-2">
                         {result.topics.length > 0 ? result.topics.map((topic, i) => (
-                            <span key={i} className="px-2 py-1 bg-slate-200 text-slate-700 rounded-md text-xs">{topic.topic}</span>
+                            <span key={i} className="px-2 py-1 bg-slate-200 text-slate-700 rounded-md text-xs">{typeof topic === 'string' ? topic : topic.topic}</span>
                         )) : <span>-</span>}
                     </div>
                 </td>
@@ -105,7 +121,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother }) 
           onClick={onAnalyzeAnother}
           className="bg-primary text-white font-bold py-3 px-8 rounded-full hover:bg-blue-800 transition-all duration-300 transform hover:scale-105 shadow-lg"
         >
-          Analyze Another File
+          Do Another Analysis
         </button>
       </div>
     </div>

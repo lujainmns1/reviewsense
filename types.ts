@@ -11,8 +11,13 @@ export enum Sentiment {
   Neutral = 'neutral',
 }
 
+export interface Topic {
+  topic: string;
+  score: number;
+}
+
 export interface AnalysisResult {
   reviewText: string;
   sentiment: Sentiment;
-  topics: string[];
+  topics: (string | Topic)[];
 }

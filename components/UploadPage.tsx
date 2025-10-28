@@ -1,8 +1,33 @@
 
 import React, { useState, useCallback } from 'react';
+import Flag from 'react-world-flags';
+
+interface ArabicCountry {
+  code: string;
+  name: string;
+  dialect: string;
+}
+
+const ARABIC_COUNTRIES: ArabicCountry[] = [
+  { code: 'EG', name: 'Egypt', dialect: 'EGY' },
+  { code: 'SA', name: 'Saudi Arabia', dialect: 'GLF' },
+  { code: 'AE', name: 'UAE', dialect: 'GLF' },
+  { code: 'KW', name: 'Kuwait', dialect: 'GLF' },
+  { code: 'BH', name: 'Bahrain', dialect: 'GLF' },
+  { code: 'QA', name: 'Qatar', dialect: 'GLF' },
+  { code: 'OM', name: 'Oman', dialect: 'GLF' },
+  { code: 'JO', name: 'Jordan', dialect: 'LEV' },
+  { code: 'LB', name: 'Lebanon', dialect: 'LEV' },
+  { code: 'SY', name: 'Syria', dialect: 'LEV' },
+  { code: 'PS', name: 'Palestine', dialect: 'LEV' },
+  { code: 'MA', name: 'Morocco', dialect: 'MAGHREB' },
+  { code: 'DZ', name: 'Algeria', dialect: 'MAGHREB' },
+  { code: 'TN', name: 'Tunisia', dialect: 'MAGHREB' },
+  { code: 'LY', name: 'Libya', dialect: 'MAGHREB' }
+];
 
 interface UploadPageProps {
-  onAnalyze: (reviews: string[], model: string) => void;
+  onAnalyze: (reviews: string[], model: string, country?: string, autoDetectDialect?: boolean) => void;
   error: string | null;
 }
 
@@ -10,6 +35,8 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
   const [reviewsText, setReviewsText] = useState('');
   const [model, setModel] = useState('arabert-arsas-sa');
   const [fileName, setFileName] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [autoDetectDialect, setAutoDetectDialect] = useState(false);
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -30,7 +57,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     const reviews = reviewsText.split('\n').map(line => line.trim()).filter(line => line);
-    onAnalyze(reviews,model);
+    onAnalyze(reviews, model, selectedCountry || undefined, autoDetectDialect);
   };
 
   return (
@@ -38,13 +65,54 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
       <h2 className="text-3xl font-bold text-center text-slate-800 mb-2">Provide Your Reviews</h2>
       <p className="text-center text-slate-500 mb-8">Upload a CSV file or paste your reviews into the text box below.</p>
       {/* chose model */}
-      <div className="mb-4">
-        <label htmlFor="model" className="block text-sm font-medium text-slate-700 mb-1">Choose Analysis Model</label>
-        <select id="model" name="model" className="block w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-primary focus:outline-none" value={model} onChange={(e) => setModel(e.target.value)}>
-          <option value="arabert-arsas-sa">Default Model(AraBERTv2 ArSAS (Positive/Neutral/Negative/Mixed))</option>
-          <option value="marbertv2-book-review-sa">MARBERTv2 Book Review (Positive/Neutral/Negative)</option>
-          <option value="xlm-roberta-twitter-sa">XLM-RoBERTa Twitter (Multilingual)</option>
-        </select>
+      <div className="space-y-4">
+        <div className="mb-4">
+          <label htmlFor="model" className="block text-sm font-medium text-slate-700 mb-1">Choose Analysis Model</label>
+          <select id="model" name="model" className="block w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-primary focus:outline-none" value={model} onChange={(e) => setModel(e.target.value)}>
+            <option value="arabert-arsas-sa">Default Model(AraBERTv2 ArSAS (Positive/Neutral/Negative/Mixed))</option>
+            <option value="marbertv2-book-review-sa">MARBERTv2 Book Review (Positive/Neutral/Negative)</option>
+            <option value="xlm-roberta-twitter-sa">XLM-RoBERTa Twitter (Multilingual)</option>
+          </select>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-2">Dialect Detection</label>
+          <div className="flex items-center mb-4">
+            <input
+              id="autoDetect"
+              type="checkbox"
+              checked={autoDetectDialect}
+              onChange={(e) => setAutoDetectDialect(e.target.checked)}
+              className="h-4 w-4 text-primary border-slate-300 rounded focus:ring-primary"
+            />
+            <label htmlFor="autoDetect" className="ml-2 block text-sm text-slate-700">
+              Auto-detect dialect
+            </label>
+          </div>
+
+          {!autoDetectDialect && (
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {ARABIC_COUNTRIES.map((country) => (
+                <button
+                  key={country.code}
+                  type="button"
+                  onClick={() => setSelectedCountry(country.code)}
+                  className={'flex items-center p-2 rounded-lg border ' + 
+                    (selectedCountry === country.code
+                      ? 'border-primary bg-blue-50'
+                      : 'border-slate-200 hover:border-primary') +
+                    ' transition-colors'}
+                >
+                  <Flag
+                    code={country.code}
+                    className="w-6 h-4 object-cover rounded"
+                  />
+                  <span className="ml-2 text-sm text-slate-700">{country.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">{error}</div>}
 

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ReviewSense — Analyze a Review</title>
+    <style>
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;padding:24px;background:#f3f4f6}
+      .card{max-width:820px;margin:24px auto;padding:20px;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+      textarea{width:100%;min-height:160px;padding:10px;border-radius:8px;border:1px solid #d1d5db}
+      select,input,button{padding:10px;border-radius:8px;border:1px solid #d1d5db}
+      .row{display:flex;gap:12px;align-items:center}
+      .muted{color:#6b7280}
+      .topics{display:flex;gap:6px;flex-wrap:wrap}
+      .topic{background:#eef2ff;padding:6px 10px;border-radius:999px;color:#3730a3}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1 style="margin:0 0 8px 0">ReviewSense — Analyze a Review</h1>
+      <p class="muted">Paste a single review below (or a short paragraph). Choose model and click Analyze. This form posts to the microservice and renders a result page.</p>
+
+      <form method="post" action="/analyze">
+        <div style="margin-top:16px">
+          <label for="text" style="font-weight:600">Review text</label>
+          <textarea id="text" name="text" placeholder="I enjoyed the product but shipping was slow..."></textarea>
+        </div>
+
+        <div style="margin-top:12px" class="row">
+          <div style="flex:1">
+            <label for="model" style="font-weight:600">Model</label>
+            <select id="model" name="model">
+              <option value="arabert-arsas-sa">AraBERTv2 ArSAS (Arabic)</option>
+              <option value="marbertv2-book-review-sa">MARBERTv2 Book Review (Arabic)</option>
+              <option value="xlm-roberta-twitter-sa">XLM-RoBERTa Twitter (Multilingual)</option>
+            </select>
+          </div>
+
+          <div style="flex:0">
+            <label style="visibility:hidden">submit</label>
+            <button type="submit" style="background:#2563eb;color:#fff;border:none;cursor:pointer">Analyze</button>
+          </div>
+        </div>
+      </form>
+
+      <hr style="margin:20px 0;border:none;border-top:1px solid #e5e7eb" />
+      <p class="muted">Or use the JSON API at <code>/analyze</code> (POST) to submit {"text":"...","model":"..."} and receive a JSON response.</p>
+    </div>
+  </body>
+</html>

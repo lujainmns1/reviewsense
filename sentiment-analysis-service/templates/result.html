@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Analysis Result — ReviewSense</title>
+    <style>
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;padding:24px;background:#f8fafc}
+      .card{max-width:900px;margin:24px auto;padding:20px;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+      .muted{color:#6b7280}
+      .label{font-weight:700}
+      .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#eef2ff;color:#1e3a8a;margin-right:8px}
+      table{width:100%;border-collapse:collapse;margin-top:12px}
+      td,th{padding:8px;border-bottom:1px solid #eef2f6;text-align:left}
+      .sent-positive{color:#065f46;background:#ecfdf5;padding:6px 10px;border-radius:8px}
+      .sent-negative{color:#7f1d1d;background:#fff1f2;padding:6px 10px;border-radius:8px}
+      .sent-neutral{color:#92400e;background:#fffbeb;padding:6px 10px;border-radius:8px}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1 style="margin:0 0 8px 0">Analysis Result</h1>
+      <p class="muted">Model used: <strong>{{ result.model_used }}</strong></p>
+
+      <h3 style="margin-top:12px">Original text</h3>
+      <div style="white-space:pre-wrap;padding:10px;border-radius:8px;border:1px solid #e6eef8;background:#fbfdff">{{ result.original_text }}</div>
+
+      <h3 style="margin-top:12px">Cleaned / normalized text</h3>
+      <div style="white-space:pre-wrap;padding:10px;border-radius:8px;border:1px solid #e6eef8;background:#fbfdff">{{ result.cleaned_text }}</div>
+
+      <table>
+        <tbody>
+          <tr>
+            <th class="label">Language</th>
+            <td>{{ result.language }}</td>
+          </tr>
+          <tr>
+            <th class="label">Dialect</th>
+            <td>{{ result.dialect or '-' }}</td>
+          </tr>
+          <tr>
+            <th class="label">Sentiment</th>
+            <td>
+              {% if result.sentiment.label == 'positive' %}
+                <span class="sent-positive">Positive ({{ result.sentiment.score }})</span>
+              {% elif result.sentiment.label == 'negative' %}
+                <span class="sent-negative">Negative ({{ result.sentiment.score }})</span>
+              {% else %}
+                <span class="sent-neutral">Neutral ({{ result.sentiment.score }})</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th class="label">Topics</th>
+            <td>
+              {% if result.topics and result.topics|length > 0 %}
+                <div class="topics">
+                  {% for t in result.topics %}
+                    <span class="pill">{{ t.topic }}{% if t.score is defined %} — {{ t.score }}{% endif %}</span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:18px">
+        <a href="/" style="text-decoration:none;color:#2563eb">&larr; Analyze another review</a>
+      </div>
+    </div>
+  </body>
+</html>
