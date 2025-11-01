@@ -161,6 +161,7 @@ def analyze_using_micro_service():
                 structured_results.append({
                     "reviewText": res["original_text"],
                     "sentiment": res["sentiment"]["label"],
+                    "sentimentScore": res["sentiment"]["score"],
                     "topics": res["topics"]
                 })
         # structured_results.append({"model":model_to_use})

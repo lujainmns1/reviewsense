@@ -90,6 +90,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother, mo
             <tr>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Review Text</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Sentiment</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Score / Avg Score</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Detected Topics</th>
             </tr>
           </thead>
@@ -98,9 +99,14 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ results, onAnalyzeAnother, mo
               <tr key={index}>
                 <td className="px-6 py-4 whitespace-normal text-sm text-slate-600">{result.reviewText}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${sentimentColors[result.sentiment].bg} ${sentimentColors[result.sentiment].text}`}>
-                    {result.sentiment}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${sentimentColors[result.sentiment].bg} ${sentimentColors[result.sentiment].text}`}>
+                      {result.sentiment}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                  {result.sentimentScore !== undefined ? result.sentimentScore.toFixed(2) : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     <div className="flex flex-wrap gap-2">

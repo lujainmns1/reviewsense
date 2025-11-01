@@ -19,5 +19,6 @@ export interface Topic {
 export interface AnalysisResult {
   reviewText: string;
   sentiment: Sentiment;
+  sentimentScore?: number;
   topics: (string | Topic)[];
 }
