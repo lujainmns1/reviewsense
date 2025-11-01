@@ -10,28 +10,32 @@ interface AnalysisResponse {
   model: string;
   selectedCountry?: string;
   detectedDialect?: string;
+  session_id?: number;
 }
 
-export const analyzeReviews = async (reviews: string[], model: string, country?: string, autoDetectDialect?: boolean): Promise<AnalysisResponse> => {
+export const analyzeReviews = async (
+  formData: FormData
+): Promise<AnalysisResponse> => {
   console.log("use backend:", USE_BACKEND)
   try {
     if (USE_BACKEND) {
-      // console.log('Using backend API for analysis');
-      const res = await backendService.analyzeReviewsWithBackend(reviews, model, country, autoDetectDialect);
+      const res = await backendService.analyzeReviewsWithBackend(formData);
       console.log("backend results:", res)
       return {
         results: res.results,
         model: res.model,
-        selectedCountry: country,
-        detectedDialect: autoDetectDialect ? res.detectedDialect : undefined
+        selectedCountry: formData.get('country')?.toString() || undefined,
+        detectedDialect: formData.get('auto_detect') === 'true' ? res.detectedDialect : undefined
       };
     } else {
       console.log('Using Front-End Gemini API for analysis');
+      const reviewText = formData.get('text')?.toString() || '';
+      const reviews = reviewText.split('\n').filter(r => r.trim());
       const results = await geminiService.analyzeReviews(reviews);
       return {
         results,
-        model,
-        selectedCountry: country
+        model: formData.get('model')?.toString() || '',
+        selectedCountry: formData.get('country')?.toString() || undefined
       };
     }
   } catch (error) {

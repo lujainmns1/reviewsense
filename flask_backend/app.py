@@ -10,7 +10,10 @@ from datetime import datetime
 from dotenv import load_dotenv
 from arabic_model_service import analyze_arabic_review
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
-import torch 
+import torch
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from models import db, User, AnalysisSession, Review, ModelResult, Topic, bcrypt
 # Load environment variables
 load_dotenv()
 
@@ -20,18 +23,28 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Configure CORS - Allow specific GitHub Codespace origin
-@app.after_request
-def after_request(response):
-    origin = request.headers.get('Origin')
-    if origin and '.app.github.dev' in origin:
-        response.headers.add('Access-Control-Allow-Origin', origin)
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/reviewsense')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
 
-CORS(app)
+# Initialize database
+db.init_app(app)
+migrate = Migrate(app, db)
+
+# Create tables
+with app.app_context():
+    db.create_all()
+
+# Configure CORS
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:5173", "https://*.app.github.dev"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 # Helper function to detect Arabic text
 def is_arabic(text):
@@ -98,19 +111,72 @@ def health():
 
 ANALYSIS_MICROSERVICE_URL = "http://127.0.0.1:5001/analyze"  # URL of the microservice
 
+@app.route('/auth/register', methods=['POST', 'OPTIONS'])
+def register():
+    if request.method == 'OPTIONS':
+        return make_response('', 200)
+    try:
+        data = request.get_json()
+        if not data or not data.get('email') or not data.get('password'):
+            return jsonify({"error": "Email and password are required"}), 400
+
+        if User.query.filter_by(email=data['email']).first():
+            return jsonify({"error": "Email already registered"}), 400
+
+        user = User(email=data['email'])
+        user.set_password(data['password'])
+        
+        db.session.add(user)
+        db.session.commit()
+
+        return jsonify({"message": "User registered successfully", "user_id": user.id}), 201
+    except Exception as e:
+        logger.error(f"Registration error: {str(e)}")
+        return jsonify({"error": "Registration failed"}), 500
+
+@app.route('/auth/login', methods=['POST', 'OPTIONS'])
+def login():
+    if request.method == 'OPTIONS':
+        return make_response('', 200)
+    try:
+        data = request.get_json()
+        if not data or not data.get('email') or not data.get('password'):
+            return jsonify({"error": "Email and password are required"}), 400
+
+        user = User.query.filter_by(email=data['email']).first()
+        if user and user.check_password(data['password']):
+            return jsonify({
+                "message": "Login successful",
+                "user_id": user.id,
+                "email": user.email
+            }), 200
+        return jsonify({"error": "Invalid credentials"}), 401
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}")
+        return jsonify({"error": "Login failed"}), 500
+
 @app.route('/analyze_micro_service', methods=["POST"])
 def analyze_using_micro_service():
     try:
-        data = request.get_json()
-        if not data or 'reviews' not in data:
+        if 'text' not in request.form:
             return jsonify({"error": "No reviews provided"}), 400
 
-        reviews = data.get('reviews', [])
-        # You can also let the user choose the model from the frontend
-        model_to_use = data.get('model') 
+        review_text = request.form.get('text')
+        reviews = [r for r in review_text.split('\n') if r.strip()]
+        model_to_use = request.form.get('model')
+        user_id = request.form.get('user_id')  # Get user_id from request
 
         if not isinstance(reviews, list) or not reviews:
             return jsonify({"error": "Reviews must be a non-empty list"}), 400
+            
+        # Create new analysis session
+        session = AnalysisSession(
+            user_id=user_id,
+            country_code=request.form.get('country_code'),
+            detected_dialect=request.form.get('detected_dialect')
+        )
+        db.session.add(session)
+        db.session.flush()
         
         # We assume this endpoint is only for Arabic reviews as per your logic
         # You could add a check here if needed.
@@ -121,6 +187,15 @@ def analyze_using_micro_service():
         for review_text in reviews:
             if not isinstance(review_text, str) or not review_text.strip():
                 continue # Skip empty reviews
+
+            # Create review record
+            review = Review(
+                session_id=session.id,
+                review_text=review_text,
+                language='ar' if is_arabic(review_text) else 'en'
+            )
+            db.session.add(review)
+            db.session.flush()
 
             payload = {
                 "text": review_text,
@@ -133,7 +208,36 @@ def analyze_using_micro_service():
                 
                 # Check for successful response
                 if response.status_code == 200:
-                    results.append(response.json())
+                    result_data = response.json()
+                    results.append(result_data)
+                    
+                    # Store the model result
+                    model_result = ModelResult(
+                        session_id=session.id,
+                        review_id=review.id,
+                        model_name=model_to_use,
+                        sentiment=result_data.get('sentiment', {}).get('label'),
+                        sentiment_score=result_data.get('sentiment', {}).get('score')
+                    )
+                    db.session.add(model_result)
+
+                    # Store topics if available
+                    topics = result_data.get('topics', [])
+                    for topic_data in topics:
+                        # Handle both dictionary and string formats
+                        if isinstance(topic_data, dict):
+                            topic_text = topic_data.get('topic', '')
+                            topic_score = topic_data.get('score', 1.0)
+                        else:
+                            topic_text = str(topic_data)
+                            topic_score = 1.0
+                            
+                        topic = Topic(
+                            review_id=review.id,
+                            topic_text=topic_text,
+                            score=topic_score
+                        )
+                        db.session.add(topic)
                 else:
                     # Log the error and add a placeholder result
                     error_info = response.json() if response.content else {"error": "Unknown microservice error"}
@@ -171,11 +275,91 @@ def analyze_using_micro_service():
         
 
 
+        # Commit all database changes
+        db.session.commit()
+        
+        # Add session_id to the response
+        full_results['session_id'] = session.id
         return jsonify(full_results)
 
     except Exception as e:
         logger.error(f"❌ Unhandled error in /analyze_micro_service: {str(e)}")
+        db.session.rollback()  # Rollback on error
         return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/analysis/session/<int:session_id>', methods=['GET'])
+def get_session_results(session_id):
+    try:
+        session = AnalysisSession.query.get_or_404(session_id)
+        
+        results = []
+        for review in session.reviews:
+            # Get the latest model result for this review
+            model_result = review.model_results[-1] if review.model_results else None
+            if model_result:
+                # Get topics for this review
+                topics = [{"topic": topic.topic_text, "score": topic.score} for topic in review.topics]
+                
+                results.append({
+                    "reviewText": review.review_text,
+                    "sentiment": model_result.sentiment,
+                    "sentimentScore": model_result.sentiment_score,
+                    "topics": topics
+                })
+        
+        return jsonify({
+            "results": results,
+            "model": session.reviews[0].model_results[0].model_name if results else "",
+            "selectedCountry": session.country_code,
+            "detectedDialect": session.detected_dialect
+        })
+    except Exception as e:
+        logger.error(f"❌ Error fetching session results: {str(e)}")
+        return jsonify({"error": "Failed to fetch session results"}), 500
+
+@app.route('/analysis/history/<int:user_id>', methods=['GET'])
+def get_analysis_history(user_id):
+    try:
+        # Get page and limit from query parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('limit', 10, type=int)
+
+        # Query analysis sessions for the user with pagination
+        sessions = AnalysisSession.query.filter_by(user_id=user_id)\
+            .order_by(AnalysisSession.created_at.desc())\
+            .paginate(page=page, per_page=per_page)
+
+        history = []
+        for session in sessions.items:
+            session_data = {
+                'session_id': session.id,
+                'created_at': session.created_at.isoformat(),
+                'country_code': session.country_code,
+                'detected_dialect': session.detected_dialect,
+                'reviews_count': len(session.reviews),
+                'models_used': []
+            }
+            
+            # Get unique models used in this session
+            models_used = set()
+            for review in session.reviews:
+                for result in review.model_results:
+                    models_used.add(result.model_name)
+            session_data['models_used'] = list(models_used)
+            
+            history.append(session_data)
+
+        return jsonify({
+            'history': history,
+            'pagination': {
+                'total': sessions.total,
+                'pages': sessions.pages,
+                'current_page': sessions.page,
+                'per_page': sessions.per_page
+            }
+        })
+    except Exception as e:
+        logger.error(f"❌ Unhandled error in /getting hisgtory: {str(e)}")
 
 if __name__ == '__main__':
     print("Starting ReviewSense Flask API...")

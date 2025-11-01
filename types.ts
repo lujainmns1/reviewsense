@@ -3,6 +3,9 @@ export enum Page {
   Home,
   Upload,
   Results,
+  Login,
+  Signup,
+  Dashboard
 }
 
 export enum Sentiment {
@@ -21,4 +24,26 @@ export interface AnalysisResult {
   sentiment: Sentiment;
   sentimentScore?: number;
   topics: (string | Topic)[];
+}
+
+export interface User {
+  id: number;
+  email: string;
+}
+
+export interface AnalysisSession {
+  id: number;
+  userId: number;
+  countryCode?: string;
+  detectedDialect?: string;
+  createdAt: string;
+  reviews: AnalysisResult[];
+}
+
+export interface AnalysisResponse {
+  results: AnalysisResult[];
+  model: string;
+  selectedCountry?: string;
+  detectedDialect?: string;
+  session_id: number;
 }

@@ -19,11 +19,11 @@ export default defineConfig(({ mode }) => {
         host: true, // listen on all addresses (required for Codespaces)
         proxy: {
           // Proxy API calls during development to avoid CORS and Codespaces tunnel auth
-          '/analyze': {
+          '/api': {
             target: 'http://127.0.0.1:5000',
             changeOrigin: true,
             secure: false,
-            rewrite: (path) => path.replace(/^\/analyze/, '/analyze')
+            rewrite: (path) => path.replace(/^\/api/, '')
           }
         }
       }

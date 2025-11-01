@@ -1,43 +1,42 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './components/HomePage';
 import UploadPage from './components/UploadPage';
 import ResultsPage from './components/ResultsPage';
+import LoginPage from './components/auth/LoginPage';
+import SignupPage from './components/auth/SignupPage';
+import DashboardPage from './components/DashboardPage';
 import Loader from './components/Loader';
 import { analyzeReviews } from './services';
 import { Page, AnalysisResult } from './types';
 
+const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isAuthenticated = localStorage.getItem('user') !== null;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+};
+
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<Page>(Page.Home);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [analysisResults, setAnalysisResults] = useState<{
     results: AnalysisResult[];
     model: string;
     selectedCountry?: string;
     detectedDialect?: string;
   }>({ results: [], model: '', selectedCountry: undefined, detectedDialect: undefined });
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
-  console.log('App is rendering, current page:', currentPage);
-
-  const handleStart = () => {
-    setCurrentPage(Page.Upload);
-    setError(null);
-    setAnalysisResults({ results: [], model: '', selectedCountry: undefined });
-  };
-
-  const handleAnalyze = useCallback(async (reviews: string[], model: string, country?: string, autoDetectDialect?: boolean) => {
-    if (reviews.length === 0) {
+  const handleAnalyze = useCallback(async (formData: FormData) => {
+    if (!formData.get('text')) {
       setError("Please provide at least one review to analyze.");
       return;
     }
     
     setIsLoading(true);
     setError(null);
-    setCurrentPage(Page.Results);
 
     try {
-      const results = await analyzeReviews(reviews, model, country, autoDetectDialect);
+      const results = await analyzeReviews(formData);
       console.log('Results from analyzeReviews:', results);
       setAnalysisResults({
         results: results.results,
@@ -45,45 +44,61 @@ const App: React.FC = () => {
         selectedCountry: results.selectedCountry || country,
         detectedDialect: results.detectedDialect
       });
+      return results.session_id;
     } catch (e) {
       console.error(e);
       setError("An error occurred during analysis. Please check your API configuration and try again.");
-      setCurrentPage(Page.Upload); // Go back to upload page on error
+      throw e;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const renderPage = () => {
-    console.log('Rendering page:', currentPage);
-    if (isLoading) {
-      return <Loader message="Analyzing reviews... This may take a moment." />;
-    }
-
-    switch (currentPage) {
-      case Page.Home:
-        return <HomePage onStart={handleStart} />;
-      case Page.Upload:
-        return <UploadPage onAnalyze={handleAnalyze} error={error} />;
-      case Page.Results:
-        return (
-          <ResultsPage 
-            results={analysisResults.results} 
-            model={analysisResults.model}
-            selectedCountry={analysisResults.selectedCountry} 
-            detectedDialect={analysisResults.detectedDialect}
-            onAnalyzeAnother={handleStart}
-          />
-        );
-      default:
-        return <HomePage onStart={handleStart} />;
-    }
-  };
-
   return (
-    <div className="min-h-screen font-sans flex flex-col items-center justify-center p-4">
-      {renderPage()}
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <HomePage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <DashboardPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/upload"
+          element={
+            <PrivateRoute>
+              <UploadPage onAnalyze={handleAnalyze} error={error} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/results/:sessionId"
+          element={
+            <PrivateRoute>
+              <ResultsPage
+                results={analysisResults.results}
+                model={analysisResults.model}
+                selectedCountry={analysisResults.selectedCountry}
+                detectedDialect={analysisResults.detectedDialect}
+                onAnalyzeAnother={() => null}
+              />
+            </PrivateRoute>
+          }
+        />
+      </Routes>
+    </Router>
   );
 };
 

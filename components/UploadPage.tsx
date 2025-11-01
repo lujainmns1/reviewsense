@@ -109,12 +109,7 @@ function Modal({ open, onClose, title, subtitle, children }: {
 }
 
 export interface UploadPageProps {
-  onAnalyze: (
-    reviews: string[],
-    model: string,
-    country?: string,
-    autoDetectDialect?: boolean
-  ) => void;
+  onAnalyze: (formData: FormData) => void;
   error: string | null;
 }
 
@@ -125,6 +120,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [autoDetectDialect, setAutoDetectDialect] = useState(false);
   const [openModelInfo, setOpenModelInfo] = useState<keyof typeof MODEL_META | null>(null);
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -144,13 +140,20 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
     }
   }, []);
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    const reviews = reviewsText
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line);
-    onAnalyze(reviews, model, selectedCountry || undefined, autoDetectDialect);
+    const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user.id) {
+      // Redirect to login if no user
+      window.location.href = '/auth/login';
+      return;
+    }
+    const formData = new FormData();
+    formData.append('text', reviewsText);
+    formData.append('model', model);
+    formData.append('country', selectedCountry || '');
+    formData.append('auto_detect', autoDetectDialect.toString());
+    formData.append('user_id', user.id.toString());
+    onAnalyze(formData);
   };
 
   const selectedModel = useMemo(() => MODEL_META[model], [model]);
