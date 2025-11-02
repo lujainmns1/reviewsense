@@ -7,6 +7,7 @@ import ResultsPage from './components/ResultsPage';
 import LoginPage from './components/auth/LoginPage';
 import SignupPage from './components/auth/SignupPage';
 import DashboardPage from './components/DashboardPage';
+import DashboardLayout from './components/DashboardLayout';
 import Loader from './components/Loader';
 import { analyzeReviews } from './services';
 import { Page, AnalysisResult } from './types';
@@ -41,7 +42,7 @@ const App: React.FC = () => {
       setAnalysisResults({
         results: results.results,
         model: results.model,
-        selectedCountry: results.selectedCountry || country,
+        selectedCountry: results.selectedCountry,
         detectedDialect: results.detectedDialect
       });
       return results.session_id;
@@ -63,7 +64,9 @@ const App: React.FC = () => {
           path="/"
           element={
             <PrivateRoute>
-              <HomePage />
+              <DashboardLayout>
+                <HomePage />
+              </DashboardLayout>
             </PrivateRoute>
           }
         />
@@ -71,7 +74,9 @@ const App: React.FC = () => {
           path="/dashboard"
           element={
             <PrivateRoute>
-              <DashboardPage />
+              <DashboardLayout>
+                <DashboardPage />
+              </DashboardLayout>
             </PrivateRoute>
           }
         />
@@ -79,7 +84,9 @@ const App: React.FC = () => {
           path="/upload"
           element={
             <PrivateRoute>
-              <UploadPage onAnalyze={handleAnalyze} error={error} />
+              <DashboardLayout>
+                <UploadPage onAnalyze={handleAnalyze} error={error} />
+              </DashboardLayout>
             </PrivateRoute>
           }
         />
@@ -87,13 +94,15 @@ const App: React.FC = () => {
           path="/results/:sessionId"
           element={
             <PrivateRoute>
-              <ResultsPage
-                results={analysisResults.results}
-                model={analysisResults.model}
-                selectedCountry={analysisResults.selectedCountry}
-                detectedDialect={analysisResults.detectedDialect}
-                onAnalyzeAnother={() => null}
-              />
+              <DashboardLayout>
+                <ResultsPage
+                  results={analysisResults.results}
+                  model={analysisResults.model}
+                  selectedCountry={analysisResults.selectedCountry}
+                  detectedDialect={analysisResults.detectedDialect}
+                  onAnalyzeAnother={() => null}
+                />
+              </DashboardLayout>
             </PrivateRoute>
           }
         />

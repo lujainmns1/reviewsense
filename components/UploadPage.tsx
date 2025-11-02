@@ -159,7 +159,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
   const selectedModel = useMemo(() => MODEL_META[model], [model]);
 
   return (
-    <div className="w-full max-w-4xl p-6 md:p-8 bg-white rounded-3xl shadow-xl border border-slate-100">
+    <div className="w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-xl border border-slate-100 p-6 md:p-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
