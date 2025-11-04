@@ -1,3 +1,4 @@
+import { login } from '@/services/authService';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,24 +15,13 @@ const LoginPage: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+     const user = await login(email, password);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to login');
-      }
-
+  
       // Store user data in localStorage
       localStorage.setItem('user', JSON.stringify({
-        id: data.user_id,
-        email: data.email,
+        id: user.id,
+        email: user.email,
       }));
 
       // Redirect to dashboard

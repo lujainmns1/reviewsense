@@ -165,15 +165,17 @@ def analyze_using_micro_service():
         reviews = [r for r in review_text.split('\n') if r.strip()]
         model_to_use = request.form.get('model')
         user_id = request.form.get('user_id')  # Get user_id from request
+        selected_country = request.form.get('country')  # Get country from form (not country_code)
+        auto_detect = request.form.get('auto_detect', 'false').lower() == 'true'
 
         if not isinstance(reviews, list) or not reviews:
             return jsonify({"error": "Reviews must be a non-empty list"}), 400
             
-        # Create new analysis session
+        # Create new analysis session (we'll update detected_dialect after getting results)
         session = AnalysisSession(
             user_id=user_id,
-            country_code=request.form.get('country_code'),
-            detected_dialect=request.form.get('detected_dialect')
+            country_code=selected_country,
+            detected_dialect=None  # Will be set after analysis
         )
         db.session.add(session)
         db.session.flush()
@@ -182,8 +184,10 @@ def analyze_using_micro_service():
         # You could add a check here if needed.
         
         logger.info(f"📝 Forwarding {len(reviews)} reviews to microservice using model '{model_to_use}'")
+        logger.info(f"📝 Selected country: {selected_country}, Auto-detect: {auto_detect}")
 
         results = []
+        detected_dialects = []  # Collect dialects from all reviews
         for review_text in reviews:
             if not isinstance(review_text, str) or not review_text.strip():
                 continue # Skip empty reviews
@@ -199,7 +203,9 @@ def analyze_using_micro_service():
 
             payload = {
                 "text": review_text,
-                "model": model_to_use
+                "model": model_to_use,
+                "autoDetectDialect": auto_detect,
+                "country": selected_country if selected_country else None
             }
 
             try:
@@ -210,6 +216,11 @@ def analyze_using_micro_service():
                 if response.status_code == 200:
                     result_data = response.json()
                     results.append(result_data)
+                    
+                    # Extract dialect from microservice response
+                    dialect = result_data.get('dialect')
+                    if dialect:
+                        detected_dialects.append(dialect)
                     
                     # Store the model result
                     model_result = ModelResult(
@@ -258,6 +269,20 @@ def analyze_using_micro_service():
                 })
 
         logger.info(f"✅ Successfully processed {len(results)} reviews via microservice.")
+        
+        # Determine the detected dialect (most common dialect from all reviews, or from first review)
+        detected_dialect = None
+        if detected_dialects:
+            # Use the most common dialect, or the first one if all are unique
+            from collections import Counter
+            dialect_counts = Counter(detected_dialects)
+            detected_dialect = dialect_counts.most_common(1)[0][0] if dialect_counts else None
+            logger.info(f"📝 Detected dialects: {detected_dialects}, Selected: {detected_dialect}")
+        
+        # Update session with detected dialect
+        session.detected_dialect = detected_dialect
+        db.session.add(session)
+        
         # restructure the result: { reviewText: string; sentiment: Sentiment; topics: string[]; }
         structured_results = []
         for res in results:
@@ -270,7 +295,12 @@ def analyze_using_micro_service():
                 })
         # structured_results.append({"model":model_to_use})
         # structured result with model 
-        full_results = {"model": model_to_use, "results": structured_results}
+        full_results = {
+            "model": model_to_use, 
+            "results": structured_results,
+            "selectedCountry": selected_country,
+            "detectedDialect": detected_dialect
+        }
         logger.info(f"Microservice results: {full_results}")
         
 

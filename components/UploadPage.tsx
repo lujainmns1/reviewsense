@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import Flag from "react-world-flags";
 import { Info, Sparkles, Upload, FileText, HelpCircle, CheckCircle2, Languages, X } from "lucide-react";
+import Loader from "./Loader";
 
 interface ArabicCountry {
   code: string;
@@ -109,17 +110,19 @@ function Modal({ open, onClose, title, subtitle, children }: {
 }
 
 export interface UploadPageProps {
-  onAnalyze: (formData: FormData) => void;
+  onAnalyze: (formData: FormData) => Promise<void>;
   error: string | null;
+  isLoading?: boolean;
 }
 
-const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
+const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error, isLoading = false }) => {
   const [reviewsText, setReviewsText] = useState("");
   const [model, setModel] = useState<keyof typeof MODEL_META>("arabert-arsas-sa");
   const [fileName, setFileName] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [autoDetectDialect, setAutoDetectDialect] = useState(false);
   const [openModelInfo, setOpenModelInfo] = useState<keyof typeof MODEL_META | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,24 +145,48 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError(null); // Clear previous errors
+    
     if (!user.id) {
       // Redirect to login if no user
       window.location.href = '/auth/login';
       return;
     }
+    if (isLoading) {
+      console.log('Already loading, preventing duplicate submission');
+      return; // Prevent double submission
+    }
+    if (!selectedCountry || selectedCountry === '') {
+      setLocalError('Please select a country for dialect detection');
+      return;
+    }
+    if (!reviewsText.trim()) {
+      setLocalError('Please provide at least one review to analyze');
+      return;
+    }
+    
+    console.log('Submitting form for analysis...');
     const formData = new FormData();
     formData.append('text', reviewsText);
     formData.append('model', model);
     formData.append('country', selectedCountry || '');
     formData.append('auto_detect', autoDetectDialect.toString());
     formData.append('user_id', user.id.toString());
-    onAnalyze(formData);
+    
+    try {
+      await onAnalyze(formData);
+      console.log('Analysis request completed');
+    } catch (error) {
+      console.error('Error in handleSubmit:', error);
+      // Error is handled by parent component, but we can set local error too
+      setLocalError('Failed to analyze reviews. Please try again.');
+    }
   };
 
   const selectedModel = useMemo(() => MODEL_META[model], [model]);
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-xl border border-slate-100 p-6 md:p-8">
+    <div className="w-full max-w-6xl mx-auto bg-white rounded-3xl shadow-xl border border-slate-100 p-6 md:p-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -171,15 +198,16 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
       </div>
 
       {/* Model selection */}
-      <div className="mt-6 grid grid-cols-1 gap-4">
+      <div className={`mt-6 grid grid-cols-1 gap-4 ${isLoading ? 'opacity-60 pointer-events-none' : ''}`}>
         <label htmlFor="model" className="text-sm font-medium text-slate-700">Choose Analysis Model</label>
         <div className="flex items-center gap-3">
           <select
             id="model"
             name="model"
-            className="block w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 focus:outline-none"
+            className="block w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 focus:outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
             value={model}
             onChange={(e) => setModel(e.target.value as keyof typeof MODEL_META)}
+            disabled={isLoading}
           >
             <option value="arabert-arsas-sa">AraBERTv2 · ArSAS (Pos/Neu/Neg/Mixed)</option>
             <option value="marbertv2-book-review-sa">MARBERTv2 · Book Review (Pos/Neu/Neg)</option>
@@ -193,6 +221,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
             title="What is this model good at?"
             onClick={() => setOpenModelInfo(model)}
             className="group inline-flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition relative"
+            disabled={isLoading}
           >
             <Info className="h-5 w-5 text-slate-700" />
             <span className="pointer-events-none absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] text-white opacity-0 group-hover:opacity-100">Click for strengths</span>
@@ -221,7 +250,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
       </div>
 
       {/* Dialect */}
-      <div className="mt-6">
+      <div className={`mt-6 ${isLoading ? 'opacity-60 pointer-events-none' : ''}`}>
         <div className="flex items-center justify-between">
           <label className="block text-sm font-medium text-slate-700">Dialect Detection</label>
           <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -254,8 +283,9 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
                     active
                       ? "border-blue-600 bg-blue-50 shadow-sm"
                       : "border-slate-200 hover:border-blue-400 hover:bg-slate-50"
-                  }`}
+                  } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                   aria-pressed={active}
+                  disabled={isLoading}
                 >
                   <span className="flex items-center gap-2 min-w-0">
                     <Flag code={country.code} className="w-6 h-4 object-cover rounded" />
@@ -271,20 +301,20 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
         )}
       </div>
 
-      {error && (
-        <div className="mt-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl" role="alert">{error}</div>
+      {(error || localError) && (
+        <div className="mt-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl" role="alert">{error || localError}</div>
       )}
 
       {/* Upload + Text */}
       <form onSubmit={handleSubmit} className="mt-6">
-        <div className="flex flex-col md:flex-row gap-6">
+        <div className={`flex flex-col md:flex-row gap-6 ${isLoading ? 'opacity-60 pointer-events-none' : ''}`}>
           {/* File Upload */}
           <div className="flex-1">
             <label htmlFor="file-upload" className="block text-sm font-medium text-slate-700 mb-2">Upload CSV</label>
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center bg-slate-50 hover:border-blue-500 transition-colors">
+            <div className={`flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center bg-slate-50 transition-colors ${isLoading ? '' : 'hover:border-blue-500'}`}>
               <Upload className="h-10 w-10 text-slate-400 mb-3" aria-hidden />
-              <label htmlFor="file-upload" className="cursor-pointer bg-white text-blue-700 font-semibold py-2 px-4 border border-blue-600 rounded-xl hover:bg-blue-50">Choose file</label>
-              <input id="file-upload" name="file-upload" type="file" className="sr-only" accept=".csv,text/csv" onChange={handleFileChange} />
+              <label htmlFor="file-upload" className={`${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} bg-white text-blue-700 font-semibold py-2 px-4 border border-blue-600 rounded-xl ${isLoading ? '' : 'hover:bg-blue-50'}`}>Choose file</label>
+              <input id="file-upload" name="file-upload" type="file" className="sr-only" accept=".csv,text/csv" onChange={handleFileChange} disabled={isLoading} />
               {fileName ? (
                 <p className="text-sm text-slate-600 mt-3 inline-flex items-center gap-1"><CheckCircle2 className="h-4 w-4" /> {fileName}</p>
               ) : (
@@ -304,7 +334,8 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
                 value={reviewsText}
                 onChange={(e) => setReviewsText(e.target.value)}
                 placeholder="Enter one review per line…"
-                className="w-full h-48 p-4 pl-10 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:outline-none transition-shadow"
+                className="w-full h-48 p-4 pl-10 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:outline-none transition-shadow disabled:bg-slate-100 disabled:cursor-not-allowed"
+                disabled={isLoading}
               />
             </div>
             <p className="text-xs text-slate-500 mt-2">Tip: You can mix Arabic and English text. The multilingual model handles code‑switching well.</p>
@@ -312,11 +343,20 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error }) => {
         </div>
 
         <div className="mt-8 flex items-center justify-center">
-          <button  disabled={selectedCountry === null || selectedCountry === ''} type="submit" 
-            className={`w-full md:w-auto text-white font-bold py-3 px-12 rounded-full transition-all duration-300 transform shadow-lg ${selectedCountry == null ? 'bg-gray-200 cursor-not-allowed' : 'bg-primary hover:bg-blue-800 hover:scale-105'}`}
+          {isLoading ? (
+            <div className="w-full flex flex-col items-center gap-4 py-4">
+              <Loader message="Analyzing reviews..." />
+              <p className="text-sm text-slate-600 animate-pulse">This may take a moment...</p>
+            </div>
+          ) : (
+            <button  
+              disabled={selectedCountry === null || selectedCountry === '' || isLoading} 
+              type="submit" 
+              className={`w-full md:w-auto text-white font-bold py-3 px-12 rounded-full transition-all duration-300 transform shadow-lg ${selectedCountry === null || selectedCountry === '' || isLoading ? 'bg-gray-200 cursor-not-allowed' : 'bg-primary hover:bg-blue-800 hover:scale-105'}`}
             >
               Analyze Reviews
-          </button>
+            </button>
+          )}
         </div>
       </form>
 

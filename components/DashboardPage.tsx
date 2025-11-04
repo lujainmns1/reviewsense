@@ -111,9 +111,9 @@ const DashboardPage: React.FC = () => {
                             <p className="flex items-center text-sm text-gray-500">
                               Country: {session.country_code || 'N/A'}
                             </p>
-                            <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
+                            {/* <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
                               Dialect: {session.detected_dialect || 'N/A'}
-                            </p>
+                            </p> */}
                           </div>
                           <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
                             <p>

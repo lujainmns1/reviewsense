@@ -33,3 +33,9 @@
 curl -X POST http://localhost:5000/analyze \
   -H "Content-Type: application/json" \
   -d '{"reviews": ["منتج رائع!", "خدمة سيئة"]}'
+```
+
+## installing docker and creating container for postrgresql 
+```bash
+docker run -d --name reviewsense-db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=reviewsense -p 5433:5432 postgres
+```

@@ -8,6 +8,7 @@ interface AnalysisResponse {
   model: string;
   selectedCountry?: string;
   detectedDialect?: string;
+  session_id?: number;
 }
 
 export const analyzeReviewsWithBackend = async (

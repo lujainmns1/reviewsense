@@ -24,8 +24,9 @@ export const analyzeReviews = async (
       return {
         results: res.results,
         model: res.model,
-        selectedCountry: formData.get('country')?.toString() || undefined,
-        detectedDialect: formData.get('auto_detect') === 'true' ? res.detectedDialect : undefined
+        selectedCountry: res.selectedCountry || formData.get('country')?.toString() || undefined,
+        detectedDialect: res.detectedDialect || undefined,
+        session_id: res.session_id
       };
     } else {
       console.log('Using Front-End Gemini API for analysis');
