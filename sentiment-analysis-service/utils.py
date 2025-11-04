@@ -174,7 +174,7 @@ def _extract_simple_topics(text: str, lang: Optional[str]) -> List[Dict[str, Any
 def extract_topics(text: str, lang: Optional[str], pos_tagger=None) -> List[Dict[str, Any]]:
     """POS-guided topic extraction for Arabic (noun/adj phrases), re-ranked by BERT similarity. Fallback to YAKE. Top 3 only."""
     # Import here to avoid circular dependency
-    from models import ARABERT_EMBEDDER, load_embedder, _get_text_embedding, ArabicPOSTagger
+    from sent_models import ARABERT_EMBEDDER, load_embedder, _get_text_embedding, ArabicPOSTagger
     
     # Use provided POS tagger or create a new one
     if pos_tagger is None:
