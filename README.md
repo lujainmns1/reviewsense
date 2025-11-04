@@ -1,23 +1,4 @@
 # ReviewSense
-
-
-
-*Graduation Project – Qassim University*  
-
-*College of Computer, Information Technology Department*  
-
-*Student:* Aseel [Full Name]  
-
-*Supervisor:* [Supervisor's Name]  
-
-*Expected Graduation:* 2025
-
-
-
----
-
-
-
 ## What is ReviewSense?
 
 
