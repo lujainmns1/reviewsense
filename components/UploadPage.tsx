@@ -67,6 +67,18 @@ const MODEL_META = {
     idealFor: ["Mixed‑language corpora", "Cross‑country analyses"],
     notes: "Prefer when reviews contain English, emojis, or non‑Arabic tokens.",
   },
+  "election-mode": {
+    title: "Election Mode",
+    subtitle: "Runs all models and keeps the highest scoring answer",
+    badge: "Best score",
+    strengths: [
+      "Evaluates every review with AraBERT, MARBERTv2, and XLM-R",
+      "Picks the sentiment with the strongest confidence",
+      "Great for audits and when you are unsure which model to trust",
+    ],
+    idealFor: ["Quality assurance", "Mixed review types", "Exploratory work"],
+    notes: "Takes a bit longer because it executes all models, but you get the best score automatically.",
+  },
 } as const;
 
 // ——— Lightweight Tailwind Modal (no shadcn) ———
@@ -212,6 +224,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error, isLoading = f
             <option value="arabert-arsas-sa">AraBERTv2 · ArSAS (Pos/Neu/Neg/Mixed)</option>
             <option value="marbertv2-book-review-sa">MARBERTv2 · Book Review (Pos/Neu/Neg)</option>
             <option value="xlm-roberta-twitter-sa">XLM‑RoBERTa · Twitter (Multilingual)</option>
+            <option value="election-mode">Election Mode · Best of all models</option>
           </select>
 
           {/* Info icon with accessible title and hover hint */}
@@ -237,6 +250,11 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalyze, error, isLoading = f
                 <span className="inline-flex items-center rounded-full border border-blue-400/60 text-blue-200 px-2 py-0.5 text-xs">{selectedModel.badge}</span>
               </div>
               <p className="text-sm text-slate-300 mt-0.5">{selectedModel.subtitle}</p>
+              {model === "election-mode" && (
+                <p className="text-xs text-blue-200 mt-2">
+                  We will run AraBERT, MARBERTv2, and XLM-R, then keep whichever model produced the highest confidence score for every review.
+                </p>
+              )}
             </div>
             <button
               type="button"

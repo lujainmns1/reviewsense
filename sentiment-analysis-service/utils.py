@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 import logging
+import sys
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 # Set up logging
@@ -173,8 +175,18 @@ def _extract_simple_topics(text: str, lang: Optional[str]) -> List[Dict[str, Any
 
 def extract_topics(text: str, lang: Optional[str], pos_tagger=None) -> List[Dict[str, Any]]:
     """POS-guided topic extraction for Arabic (noun/adj phrases), re-ranked by BERT similarity. Fallback to YAKE. Top 3 only."""
-    # Import here to avoid circular dependency
-    from sent_models import ARABERT_EMBEDDER, load_embedder, _get_text_embedding, ArabicPOSTagger
+    # Import here to avoid circular dependency and handle direct module execution
+    try:
+        from models import ARABERT_EMBEDDER, load_embedder, _get_text_embedding, ArabicPOSTagger
+    except ModuleNotFoundError:
+        service_dir = Path(__file__).resolve().parent
+        if str(service_dir) not in sys.path:
+            sys.path.append(str(service_dir))
+        try:
+            from models import ARABERT_EMBEDDER, load_embedder, _get_text_embedding, ArabicPOSTagger
+        except ModuleNotFoundError as err:
+            logger.error(f"Unable to import topic extraction dependencies: {err}")
+            return _extract_simple_topics(text, lang)
     
     # Use provided POS tagger or create a new one
     if pos_tagger is None:

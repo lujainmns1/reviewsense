@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AnalysisResult, Sentiment } from '../types';
+import { AnalysisResponse, AnalysisResult, Sentiment } from '../types';
 import StarIcon from './icons/StarIcon';
 import Flag from 'react-world-flags';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -17,6 +17,18 @@ const sentimentColors: { [key in Sentiment]: { bg: string; text: string; border:
   [Sentiment.Neutral]: { bg: 'bg-amber-500/15', text: 'text-amber-200', border: 'border-amber-400/60' },
 };
 
+const MODEL_DISPLAY_NAMES: Record<string, string> = {
+  'arabert-arsas-sa': 'AraBERTv2 · ArSAS',
+  'marbertv2-book-review-sa': 'MARBERTv2 · Book Review',
+  'xlm-roberta-twitter-sa': 'XLM‑RoBERTa · Twitter',
+  'election-mode': 'Election Mode (best score)',
+};
+
+const formatModelName = (modelKey?: string) => {
+  if (!modelKey) return 'Unknown model';
+  return MODEL_DISPLAY_NAMES[modelKey] || modelKey;
+};
+
 const SummaryCard: React.FC<{ title: string; count: number; colorClass: string }> = ({ title, count, colorClass }) => (
   <div className={`p-5 rounded-2xl text-center border ${colorClass}`}>
     <p className="text-3xl font-black">{count}</p>
@@ -31,6 +43,8 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
   const [model, setModel] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string | undefined>();
   const [detectedDialect, setDetectedDialect] = useState<string | undefined>();
+  const [mode, setMode] = useState<'single' | 'election'>('single');
+  const [modelsConsidered, setModelsConsidered] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sentimentCounts, setSentimentCounts] = useState<{ [key in Sentiment]?: number }>({});
@@ -40,11 +54,16 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
       if (!sessionId) return;
       
       try {
-        const data = await getSessionResults(parseInt(sessionId, 10));
+        const data = await getSessionResults(parseInt(sessionId, 10)) as AnalysisResponse & {
+          mode?: 'single' | 'election';
+          modelsConsidered?: string[];
+        };
         setResults(data.results);
         setModel(data.model);
         setSelectedCountry(data.selectedCountry);
         setDetectedDialect(data.detectedDialect);
+        setMode(data.mode || 'single');
+        setModelsConsidered(data.modelsConsidered || (data.model ? [data.model] : []));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch results');
       } finally {
@@ -89,12 +108,38 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
 
   const positivePercentage = (sentimentCounts[Sentiment.Positive] || 0) / results.length;
   const starRating = Math.max(1, Math.ceil(positivePercentage * 5));
+  const isElectionMode = mode === 'election';
+  const consideredModels = (modelsConsidered && modelsConsidered.length > 0
+    ? modelsConsidered
+    : (model ? [model] : []));
 
   return (
     <div className="w-full max-w-6xl mx-auto bg-slate-900/60 border border-white/10 rounded-3xl shadow-2xl shadow-blue-500/10 p-8 text-white">
-      <h2 className="text-3xl font-black text-center mb-6">
-        Analysis Results Using Model: <b><u>{model}</u></b>
-      </h2>
+      <div className="text-center mb-6 space-y-2">
+        <h2 className="text-3xl font-black">Analysis Results</h2>
+        <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-slate-300">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1 bg-white/5 text-white font-semibold">
+            Mode: {isElectionMode ? 'Election (best score)' : 'Single model'}
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 px-3 py-1 text-blue-100">
+            Primary model: {formatModelName(model)}
+          </span>
+        </div>
+        {consideredModels.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2 text-xs text-slate-300">
+            {consideredModels.map((m) => (
+              <span key={m} className="px-2 py-1 rounded-lg border border-white/15 bg-white/5">
+                {formatModelName(m)}
+              </span>
+            ))}
+          </div>
+        )}
+        {isElectionMode && (
+          <p className="text-xs text-slate-400">
+            Each review is scored by all available models, and the sentiment with the highest confidence is kept.
+          </p>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="md:col-span-1 p-4 bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center justify-center">
@@ -148,6 +193,11 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
               <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider">
                 Topics
               </th>
+              {isElectionMode && (
+                <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Model Used
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-transparent divide-y divide-white/10">
@@ -175,6 +225,11 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
                     )) : <span>-</span>}
                   </div>
                 </td>
+              {isElectionMode && (
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">
+                  {formatModelName(result.modelUsed)}
+                </td>
+              )}
               </tr>
             ))}
           </tbody>

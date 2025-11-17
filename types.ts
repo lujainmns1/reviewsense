@@ -24,6 +24,7 @@ export interface AnalysisResult {
   sentiment: Sentiment;
   sentimentScore?: number;
   topics: (string | Topic)[];
+  modelUsed?: string;
 }
 
 export interface User {
@@ -43,7 +44,9 @@ export interface AnalysisSession {
 export interface AnalysisResponse {
   results: AnalysisResult[];
   model: string;
+  mode?: 'single' | 'election';
+  modelsConsidered?: string[];
   selectedCountry?: string;
   detectedDialect?: string;
-  session_id: number;
+  session_id?: number;
 }

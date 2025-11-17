@@ -110,6 +110,12 @@ def health():
 
 
 ANALYSIS_MICROSERVICE_URL = "http://127.0.0.1:5001/analyze"  # URL of the microservice
+ELECTION_MODE_VALUE = "election-mode"
+AVAILABLE_MODEL_KEYS = [
+    "arabert-arsas-sa",
+    "marbertv2-book-review-sa",
+    "xlm-roberta-twitter-sa"
+]
 
 @app.route('/auth/register', methods=['POST', 'OPTIONS'])
 def register():
@@ -186,8 +192,14 @@ def analyze_using_micro_service():
         logger.info(f"📝 Forwarding {len(reviews)} reviews to microservice using model '{model_to_use}'")
         logger.info(f"📝 Selected country: {selected_country}, Auto-detect: {auto_detect}")
 
-        results = []
+        if model_to_use not in AVAILABLE_MODEL_KEYS and model_to_use != ELECTION_MODE_VALUE:
+            return jsonify({"error": f"Unknown model '{model_to_use}' requested"}), 400
+
+        election_mode_enabled = model_to_use == ELECTION_MODE_VALUE
+        models_for_run = AVAILABLE_MODEL_KEYS if election_mode_enabled else [model_to_use]
+
         detected_dialects = []  # Collect dialects from all reviews
+        structured_results = []
         for review_text in reviews:
             if not isinstance(review_text, str) or not review_text.strip():
                 continue # Skip empty reviews
@@ -201,74 +213,94 @@ def analyze_using_micro_service():
             db.session.add(review)
             db.session.flush()
 
-            payload = {
-                "text": review_text,
-                "model": model_to_use,
-                "autoDetectDialect": auto_detect,
-                "country": selected_country if selected_country else None
-            }
+            best_result_payload = None
+            best_topics_payload = []
+            best_model_name = None
+            best_dialect = None
+            best_score = -1.0
 
-            try:
-                # Set a timeout for the request to avoid waiting forever
-                response = requests.post(ANALYSIS_MICROSERVICE_URL, json=payload, timeout=30)
-                
-                # Check for successful response
-                if response.status_code == 200:
+            for candidate_model in models_for_run:
+                payload = {
+                    "text": review_text,
+                    "model": candidate_model,
+                    "autoDetectDialect": auto_detect,
+                    "country": selected_country if selected_country else None
+                }
+
+                try:
+                    response = requests.post(ANALYSIS_MICROSERVICE_URL, json=payload, timeout=30)
+                    if response.status_code != 200:
+                        error_info = response.json() if response.content else {"error": "Unknown microservice error"}
+                        logger.error(
+                            f"❌ Microservice error for review '{review_text[:50]}...' "
+                            f"with model '{candidate_model}': {response.status_code} - {error_info}"
+                        )
+                        continue
+
                     result_data = response.json()
-                    results.append(result_data)
-                    
-                    # Extract dialect from microservice response
-                    dialect = result_data.get('dialect')
-                    if dialect:
-                        detected_dialects.append(dialect)
-                    
-                    # Store the model result
+                    model_used = result_data.get('model_used', candidate_model)
+
                     model_result = ModelResult(
                         session_id=session.id,
                         review_id=review.id,
-                        model_name=model_to_use,
+                        model_name=model_used,
                         sentiment=result_data.get('sentiment', {}).get('label'),
                         sentiment_score=result_data.get('sentiment', {}).get('score')
                     )
                     db.session.add(model_result)
 
-                    # Store topics if available
-                    topics = result_data.get('topics', [])
-                    for topic_data in topics:
-                        # Handle both dictionary and string formats
-                        if isinstance(topic_data, dict):
-                            topic_text = topic_data.get('topic', '')
-                            topic_score = topic_data.get('score', 1.0)
-                        else:
-                            topic_text = str(topic_data)
-                            topic_score = 1.0
-                            
-                        topic = Topic(
-                            review_id=review.id,
-                            topic_text=topic_text,
-                            score=topic_score
-                        )
-                        db.session.add(topic)
-                else:
-                    # Log the error and add a placeholder result
-                    error_info = response.json() if response.content else {"error": "Unknown microservice error"}
-                    logger.error(f"❌ Microservice error for review '{review_text[:50]}...': {response.status_code} - {error_info}")
-                    results.append({
-                        "original_text": review_text,
-                        "error": f"Failed to analyze: {error_info.get('error', 'Service unavailable')}",
-                        "status_code": response.status_code
-                    })
-                    
-            except requests.exceptions.RequestException as e:
-                # Handle connection errors, timeouts, etc.
-                logger.error(f"❌ Could not connect to microservice: {e}")
-                results.append({
-                    "original_text": review_text,
-                    "error": "Microservice is unreachable.",
-                    "status_code": 503 # Service Unavailable
-                })
+                    current_score = result_data.get('sentiment', {}).get('score')
+                    try:
+                        numeric_score = float(current_score)
+                    except (TypeError, ValueError):
+                        numeric_score = -1.0
 
-        logger.info(f"✅ Successfully processed {len(results)} reviews via microservice.")
+                    if numeric_score > best_score:
+                        best_score = numeric_score
+                        best_result_payload = result_data
+                        best_model_name = model_used
+                        best_topics_payload = result_data.get('topics', [])
+                        best_dialect = result_data.get('dialect')
+
+                except requests.exceptions.RequestException as e:
+                    logger.error(
+                        f"❌ Could not connect to microservice for model '{candidate_model}': {e}"
+                    )
+                    continue
+
+            if not best_result_payload:
+                logger.error(f"❌ All models failed for review '{review_text[:80]}'")
+                raise ValueError("All sentiment models failed for at least one review.")
+
+            chosen_model_name = best_model_name or models_for_run[0]
+
+            structured_results.append({
+                "reviewText": best_result_payload.get("original_text", review_text),
+                "sentiment": best_result_payload.get("sentiment", {}).get("label"),
+                "sentimentScore": best_result_payload.get("sentiment", {}).get("score"),
+                "topics": best_topics_payload,
+                "modelUsed": chosen_model_name
+            })
+
+            if best_dialect:
+                detected_dialects.append(best_dialect)
+
+            for topic_data in best_topics_payload:
+                if isinstance(topic_data, dict):
+                    topic_text = topic_data.get('topic', '')
+                    topic_score = topic_data.get('score', 1.0)
+                else:
+                    topic_text = str(topic_data)
+                    topic_score = 1.0
+
+                topic = Topic(
+                    review_id=review.id,
+                    topic_text=topic_text,
+                    score=topic_score
+                )
+                db.session.add(topic)
+
+        logger.info(f"✅ Successfully processed {len(structured_results)} reviews via microservice.")
         
         # Determine the detected dialect (most common dialect from all reviews, or from first review)
         detected_dialect = None
@@ -284,19 +316,11 @@ def analyze_using_micro_service():
         db.session.add(session)
         
         # restructure the result: { reviewText: string; sentiment: Sentiment; topics: string[]; }
-        structured_results = []
-        for res in results:
-            if "original_text" in res and "sentiment" in res and "topics" in res:
-                structured_results.append({
-                    "reviewText": res["original_text"],
-                    "sentiment": res["sentiment"]["label"],
-                    "sentimentScore": res["sentiment"]["score"],
-                    "topics": res["topics"]
-                })
-        # structured_results.append({"model":model_to_use})
         # structured result with model 
         full_results = {
-            "model": model_to_use, 
+            "model": ELECTION_MODE_VALUE if election_mode_enabled else model_to_use, 
+            "mode": "election" if election_mode_enabled else "single",
+            "modelsConsidered": models_for_run,
             "results": structured_results,
             "selectedCountry": selected_country,
             "detectedDialect": detected_dialect
@@ -323,23 +347,36 @@ def get_session_results(session_id):
         session = AnalysisSession.query.get_or_404(session_id)
         
         results = []
+        models_used = set()
         for review in session.reviews:
-            # Get the latest model result for this review
-            model_result = review.model_results[-1] if review.model_results else None
-            if model_result:
-                # Get topics for this review
+            best_model_result = None
+            for model_result in review.model_results:
+                models_used.add(model_result.model_name)
+                if (
+                    best_model_result is None
+                    or (model_result.sentiment_score or 0) > (best_model_result.sentiment_score or 0)
+                ):
+                    best_model_result = model_result
+
+            if best_model_result:
                 topics = [{"topic": topic.topic_text, "score": topic.score} for topic in review.topics]
-                
                 results.append({
                     "reviewText": review.review_text,
-                    "sentiment": model_result.sentiment,
-                    "sentimentScore": model_result.sentiment_score,
-                    "topics": topics
+                    "sentiment": best_model_result.sentiment,
+                    "sentimentScore": best_model_result.sentiment_score,
+                    "topics": topics,
+                    "modelUsed": best_model_result.model_name
                 })
-        
+
+        models_used_list = sorted(models_used)
+        mode = "election" if len(models_used_list) > 1 else "single"
+        model_label = "election-mode" if mode == "election" else (models_used_list[0] if models_used_list else "")
+
         return jsonify({
             "results": results,
-            "model": session.reviews[0].model_results[0].model_name if results else "",
+            "model": model_label,
+            "mode": mode,
+            "modelsConsidered": models_used_list,
             "selectedCountry": session.country_code,
             "detectedDialect": session.detected_dialect
         })

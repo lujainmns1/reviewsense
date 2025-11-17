@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, List
 from datetime import datetime
 
 from flask import Flask, jsonify, request, render_template
@@ -17,7 +17,6 @@ from sent_models import (
     load_embedder,
     ArabicPOSTagger,
 )
-
 from utils import (
     clean_text,
     detect_language,
@@ -40,6 +39,8 @@ app = Flask(__name__)
 
 # Initialize POS tagger instance
 POS_TAGGER = ArabicPOSTagger()
+ELECTION_MODE_VALUE = "election-mode"
+AVAILABLE_MODEL_KEYS: List[str] = list(AVAILABLE_MODELS.keys())
 
 # ---------------------------
 # Routes
@@ -115,14 +116,14 @@ def analyze() -> Any:
         return jsonify({"error": "Invalid payload.", "code": "bad_payload"}), 400
 
     text = payload.get("text", "")
-    model_name = payload.get("model", "")
+    requested_model = payload.get("model", "")
 
     if not isinstance(text, str) or not text.strip():
         logger.error(f"[{req_id}] Empty or invalid input text received")
         return jsonify({"error": "Empty input text.", "code": "empty_text"}), 400
 
-    if model_name not in AVAILABLE_MODELS:
-        logger.error(f"[{req_id}] Unknown model requested: {model_name}")
+    if requested_model != ELECTION_MODE_VALUE and requested_model not in AVAILABLE_MODELS:
+        logger.error(f"[{req_id}] Unknown model requested: {requested_model}")
         return jsonify({"error": "Unknown model.", "code": "unknown_model"}), 400
 
     # Text preprocessing pipeline
@@ -136,18 +137,53 @@ def analyze() -> Any:
     lang = detect_language(cleaned) or "ar"  # default to Arabic if unsure
     logger.info(f"[{req_id}] Detected language: {lang} (confidence: {'high' if lang else 'fallback to ar'})")
 
-    # Sentiment
-    model = AVAILABLE_MODELS[model_name]
-    try:
-        sentiment = model.predict(cleaned, lang_hint=lang)
-    except Exception as e:
-        # Fallback: try a different model automatically to avoid hard failure
-        fallback_model = "arabert-arsas-sa" if model_name != "arabert-arsas-sa" else "marbertv2-book-review-sa"
+    def run_model(candidate_name: str):
+        """Run sentiment model with fallback handling."""
+        candidate_model = AVAILABLE_MODELS[candidate_name]
         try:
-            sentiment = AVAILABLE_MODELS[fallback_model].predict(cleaned, lang_hint=lang)
-            model_name = fallback_model  # report the actually used model
-        except Exception:
-            return jsonify({"error": f"Model execution failed: {str(e)}", "code": "model_error"}), 500
+            result = candidate_model.predict(cleaned, lang_hint=lang)
+            return result, candidate_name
+        except Exception as err:
+            fallback_model = "arabert-arsas-sa" if candidate_name != "arabert-arsas-sa" else "marbertv2-book-review-sa"
+            fallback = AVAILABLE_MODELS.get(fallback_model)
+            if fallback:
+                try:
+                    fallback_result = fallback.predict(cleaned, lang_hint=lang)
+                    logger.warning(
+                        f"[{req_id}] Model '{candidate_name}' failed ({err}); "
+                        f"fallback '{fallback_model}' succeeded."
+                    )
+                    return fallback_result, fallback_model
+                except Exception as fallback_err:
+                    logger.error(
+                        f"[{req_id}] Fallback model '{fallback_model}' also failed: {fallback_err}"
+                    )
+                    raise
+            raise
+
+    candidate_models = AVAILABLE_MODEL_KEYS if requested_model == ELECTION_MODE_VALUE else [requested_model]
+    best_sentiment = None
+    best_model_name = None
+    best_score = -1.0
+
+    for candidate in candidate_models:
+        try:
+            sentiment_candidate, used_model_name = run_model(candidate)
+        except Exception as e:
+            logger.error(
+                f"[{req_id}] Failed to run model '{candidate}': {e}",
+                exc_info=True
+            )
+            continue
+
+        score = float(sentiment_candidate.get("score", 0))
+        if score > best_score:
+            best_score = score
+            best_sentiment = sentiment_candidate
+            best_model_name = used_model_name
+
+    if best_sentiment is None or best_model_name is None:
+        return jsonify({"error": "All models failed to process the text.", "code": "model_error"}), 500
 
     # Dialect detection logic
     dialect = None
@@ -180,11 +216,13 @@ def analyze() -> Any:
         "language": lang,
         "dialect": dialect,
         "sentiment": {
-            "label": sentiment["label"],
-            "score": float(sentiment["score"]),
+            "label": best_sentiment["label"],
+            "score": float(best_sentiment["score"]),
         },
         "topics": topics,
-        "model_used": model_name,
+        "model_used": best_model_name,
+        "mode": "election" if len(candidate_models) > 1 else "single",
+        "models_considered": candidate_models,
     }
     
     # Log final results
