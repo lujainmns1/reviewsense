@@ -111,9 +111,9 @@ const DashboardPage: React.FC = () => {
                             <p className="flex items-center text-sm text-gray-500">
                               Country: {session.country_code || 'N/A'}
                             </p>
-                            {/* <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
+                            <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
                               Dialect: {session.detected_dialect || 'N/A'}
-                            </p> */}
+                            </p>
                           </div>
                           <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
                             <p>
@@ -143,18 +143,30 @@ const DashboardPage: React.FC = () => {
 
             {pagination && pagination.pages > 1 && (
               <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-                <div className="flex-1 flex justify-between sm:hidden">
+                <div className="flex flex-1 items-center justify-between gap-4 flex-wrap">
                   <button
                     onClick={() => fetchAnalysisHistory(pagination.current_page - 1)}
                     disabled={pagination.current_page === 1}
-                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${
+                      pagination.current_page === 1
+                        ? 'cursor-not-allowed border-gray-200 text-gray-400 bg-gray-50'
+                        : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                    }`}
                   >
                     Previous
                   </button>
+                  <p className="text-sm text-gray-500">
+                    Page <span className="font-semibold text-gray-900">{pagination.current_page}</span> of{' '}
+                    <span className="font-semibold text-gray-900">{pagination.pages}</span>
+                  </p>
                   <button
                     onClick={() => fetchAnalysisHistory(pagination.current_page + 1)}
                     disabled={pagination.current_page === pagination.pages}
-                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${
+                      pagination.current_page === pagination.pages
+                        ? 'cursor-not-allowed border-gray-200 text-gray-400 bg-gray-50'
+                        : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                    }`}
                   >
                     Next
                   </button>

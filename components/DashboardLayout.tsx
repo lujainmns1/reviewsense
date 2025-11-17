@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Upload, BarChart3, Home, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, Upload, BarChart3, LogOut, User } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -17,16 +17,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   };
 
   const navigation = [
-    { name: 'Home', path: '/', icon: Home },
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Upload', path: '/upload', icon: Upload },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/') {
-      return location.pathname === '/';
-    }
-    return location.pathname.startsWith(path);
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
   // Check if we're on results page

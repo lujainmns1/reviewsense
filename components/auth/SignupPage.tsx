@@ -1,7 +1,7 @@
 import { register } from '@/services/authService';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+// postgresSql
 const SignupPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
