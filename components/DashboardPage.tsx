@@ -60,15 +60,15 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full text-slate-100">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">View and manage your analysis sessions</p>
+        <h1 className="text-3xl font-black text-white tracking-tight">Dashboard</h1>
+        <p className="text-slate-400 mt-1">View and manage your analysis sessions</p>
       </div>
 
       <div className="max-w-7xl">
         {error && (
-          <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          <div className="bg-red-500/10 border border-red-500/40 text-red-100 px-4 py-3 rounded-2xl relative mb-4">
             {error}
           </div>
         )}
@@ -76,53 +76,53 @@ const DashboardPage: React.FC = () => {
         <div className="mb-6">
           <button
             onClick={handleNewAnalysis}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="bg-blue-500/80 text-white px-5 py-2.5 rounded-xl hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-semibold"
           >
             New Analysis
           </button>
         </div>
 
         {loading ? (
-          <div className="text-center">Loading...</div>
+          <div className="text-center text-slate-400">Loading...</div>
         ) : sessions.length === 0 ? (
-          <div className="text-center text-gray-500">
+          <div className="text-center text-slate-400">
             No analysis sessions found. Start by creating a new analysis.
           </div>
         ) : (
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
+          <div className="bg-slate-900/50 border border-white/5 shadow-xl shadow-black/40 overflow-hidden sm:rounded-3xl">
+            <ul className="divide-y divide-white/5">
               {sessions.map((session) => (
                 <li key={session.session_id}>
                   <div className="px-4 py-4 sm:px-6">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-indigo-600 truncate">
+                          <p className="text-sm font-semibold text-blue-300 truncate">
                             Session #{session.session_id}
                           </p>
                           <div className="ml-2 flex-shrink-0 flex">
-                            <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-400/30">
                               {session.reviews_count} reviews
                             </p>
                           </div>
                         </div>
                         <div className="mt-2 sm:flex sm:justify-between">
                           <div className="sm:flex">
-                            <p className="flex items-center text-sm text-gray-500">
+                            <p className="flex items-center text-sm text-slate-400">
                               Country: {session.country_code || 'N/A'}
                             </p>
-                            <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
+                            <p className="mt-2 flex items-center text-sm text-slate-400 sm:mt-0 sm:ml-6">
                               Dialect: {session.detected_dialect || 'N/A'}
                             </p>
                           </div>
-                          <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                          <div className="mt-2 flex items-center text-sm text-slate-400 sm:mt-0">
                             <p>
                               {new Date(session.created_at).toLocaleDateString()}
                             </p>
                           </div>
                         </div>
                         <div className="mt-2">
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-slate-400">
                             Models used: {session.models_used.join(', ')}
                           </p>
                         </div>
@@ -130,7 +130,7 @@ const DashboardPage: React.FC = () => {
                       <div className="ml-5 flex-shrink-0">
                         <button
                           onClick={() => handleViewResults(session.session_id)}
-                          className="text-indigo-600 hover:text-indigo-900"
+                          className="text-blue-300 hover:text-white font-semibold"
                         >
                           View Results
                         </button>
@@ -142,30 +142,30 @@ const DashboardPage: React.FC = () => {
             </ul>
 
             {pagination && pagination.pages > 1 && (
-              <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-                <div className="flex flex-1 items-center justify-between gap-4 flex-wrap">
+              <div className="bg-slate-900/60 px-4 py-4 flex items-center justify-between border-t border-white/10 rounded-b-3xl sm:px-6">
+                <div className="flex flex-1 items-center justify-between gap-4 flex-wrap text-sm">
                   <button
                     onClick={() => fetchAnalysisHistory(pagination.current_page - 1)}
                     disabled={pagination.current_page === 1}
-                    className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${
+                    className={`inline-flex items-center px-4 py-2 border rounded-xl font-medium transition ${
                       pagination.current_page === 1
-                        ? 'cursor-not-allowed border-gray-200 text-gray-400 bg-gray-50'
-                        : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                        ? 'cursor-not-allowed border-white/5 text-slate-500 bg-white/5'
+                        : 'border-white/10 text-white bg-transparent hover:bg-white/10'
                     }`}
                   >
                     Previous
                   </button>
-                  <p className="text-sm text-gray-500">
-                    Page <span className="font-semibold text-gray-900">{pagination.current_page}</span> of{' '}
-                    <span className="font-semibold text-gray-900">{pagination.pages}</span>
+                  <p className="text-slate-400">
+                    Page <span className="font-semibold text-white">{pagination.current_page}</span> of{' '}
+                    <span className="font-semibold text-white">{pagination.pages}</span>
                   </p>
                   <button
                     onClick={() => fetchAnalysisHistory(pagination.current_page + 1)}
                     disabled={pagination.current_page === pagination.pages}
-                    className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${
+                    className={`inline-flex items-center px-4 py-2 border rounded-xl font-medium transition ${
                       pagination.current_page === pagination.pages
-                        ? 'cursor-not-allowed border-gray-200 text-gray-400 bg-gray-50'
-                        : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                        ? 'cursor-not-allowed border-white/5 text-slate-500 bg-white/5'
+                        : 'border-white/10 text-white bg-transparent hover:bg-white/10'
                     }`}
                   >
                     Next

@@ -12,15 +12,15 @@ interface ResultsPageProps {
 
 
 const sentimentColors: { [key in Sentiment]: { bg: string; text: string; border: string } } = {
-  [Sentiment.Positive]: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-400' },
-  [Sentiment.Negative]: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-400' },
-  [Sentiment.Neutral]: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-400' },
+  [Sentiment.Positive]: { bg: 'bg-emerald-500/15', text: 'text-emerald-200', border: 'border-emerald-400/60' },
+  [Sentiment.Negative]: { bg: 'bg-rose-500/15', text: 'text-rose-200', border: 'border-rose-400/60' },
+  [Sentiment.Neutral]: { bg: 'bg-amber-500/15', text: 'text-amber-200', border: 'border-amber-400/60' },
 };
 
 const SummaryCard: React.FC<{ title: string; count: number; colorClass: string }> = ({ title, count, colorClass }) => (
-  <div className={`p-4 rounded-lg text-center ${colorClass}`}>
-    <p className="text-3xl font-bold">{count}</p>
-    <p className="text-sm font-medium">{title}</p>
+  <div className={`p-5 rounded-2xl text-center border ${colorClass}`}>
+    <p className="text-3xl font-black">{count}</p>
+    <p className="text-sm font-medium text-slate-200 mt-1">{title}</p>
   </div>
 );
 
@@ -67,7 +67,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
 
   if (loading) {
     return (
-      <div className="text-center p-8 bg-white rounded-2xl shadow-xl">
+      <div className="text-center p-8 bg-slate-900/60 border border-white/10 rounded-3xl shadow-2xl shadow-blue-500/10 text-white">
         <h2 className="text-2xl font-bold">Loading results...</h2>
       </div>
     );
@@ -75,11 +75,11 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
 
   if (error || !results.length) {
     return (
-      <div className="text-center p-8 bg-white rounded-2xl shadow-xl">
+      <div className="text-center p-8 bg-slate-900/60 border border-white/10 rounded-3xl shadow-2xl shadow-blue-500/10 text-white">
         <h2 className="text-2xl font-bold">{error || 'No results to display.'}</h2>
         <button 
           onClick={() => navigate('/upload')} 
-          className="mt-4 bg-primary text-white font-bold py-2 px-6 rounded-full hover:bg-blue-800"
+          className="mt-4 bg-blue-600 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-500 transition"
         >
           Try Another Analysis
         </button>
@@ -91,85 +91,85 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
   const starRating = Math.max(1, Math.ceil(positivePercentage * 5));
 
   return (
-    <div className="w-full max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-8">
-      <h2 className="text-3xl font-bold text-center text-slate-800 mb-6">
+    <div className="w-full max-w-6xl mx-auto bg-slate-900/60 border border-white/10 rounded-3xl shadow-2xl shadow-blue-500/10 p-8 text-white">
+      <h2 className="text-3xl font-black text-center mb-6">
         Analysis Results Using Model: <b><u>{model}</u></b>
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="md:col-span-1 p-4 bg-slate-50 rounded-lg flex flex-col items-center justify-center">
+        <div className="md:col-span-1 p-4 bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center justify-center">
           {selectedCountry && (
             <div className="flex flex-col items-center gap-2 mb-3">
-              <Flag code={selectedCountry} className="w-8 h-6 object-cover rounded shadow-sm" />
+              <Flag code={selectedCountry} className="w-8 h-6 object-cover rounded shadow-lg" />
               {detectedDialect && (
-                <div className="text-sm text-slate-600 mt-1">
+                <div className="text-sm text-slate-300 mt-1">
                   Detected Dialect: {detectedDialect}
                 </div>
               )}
             </div>
           )}
-          <h3 className="text-lg font-semibold text-slate-700 mb-2">Overall Rating</h3>
+          <h3 className="text-lg font-semibold text-slate-200 mb-2">Overall Rating</h3>
           <div className="flex">
             {[...Array(5)].map((_, i) => (
-              <StarIcon key={i} className={`h-8 w-8 ${i < starRating ? 'text-accent' : 'text-slate-300'}`} />
+              <StarIcon key={i} className={`h-8 w-8 ${i < starRating ? 'text-blue-400' : 'text-slate-700'}`} />
             ))}
           </div>
         </div>
         <SummaryCard 
           title="Positive Reviews" 
           count={sentimentCounts[Sentiment.Positive] || 0} 
-          colorClass="bg-green-100 text-green-800" 
+          colorClass="border-emerald-400/40 bg-emerald-500/10 text-emerald-200" 
         />
         <SummaryCard 
           title="Negative Reviews" 
           count={sentimentCounts[Sentiment.Negative] || 0} 
-          colorClass="bg-red-100 text-red-800" 
+          colorClass="border-rose-400/40 bg-rose-500/10 text-rose-200" 
         />
         <SummaryCard 
           title="Neutral Reviews" 
           count={sentimentCounts[Sentiment.Neutral] || 0} 
-          colorClass="bg-yellow-100 text-yellow-800" 
+          colorClass="border-amber-400/40 bg-amber-500/10 text-amber-200" 
         />
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+        <table className="min-w-full divide-y divide-white/10 text-left">
+          <thead className="bg-white/5 text-slate-300">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider">
                 Review Text
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider">
                 Sentiment
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider">
                 Score
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider">
                 Topics
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-200">
+          <tbody className="bg-transparent divide-y divide-white/10">
             {results.map((result, index) => (
               <tr key={index}>
-                <td className="px-6 py-4 whitespace-normal text-sm text-slate-600">
+                <td className="px-6 py-4 whitespace-normal text-sm text-slate-200">
                   {result.reviewText}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex flex-col gap-1">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${sentimentColors[result.sentiment].bg} ${sentimentColors[result.sentiment].text}`}>
+                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${sentimentColors[result.sentiment].bg} ${sentimentColors[result.sentiment].text} ${sentimentColors[result.sentiment].border}`}>
                       {result.sentiment}
                     </span>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">
                   {result.sentimentScore !== undefined ? result.sentimentScore.toFixed(2) : '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">
                   <div className="flex flex-wrap gap-2">
                     {result.topics.length > 0 ? result.topics.map((topic, i) => (
-                      <span key={i} className="px-2 py-1 bg-slate-200 text-slate-700 rounded-md text-xs">
+                      <span key={i} className="px-2 py-1 bg-white/10 text-white rounded-md text-xs border border-white/20">
                         {typeof topic === 'string' ? topic : topic.topic}
                       </span>
                     )) : <span>-</span>}
@@ -184,7 +184,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
       <div className="mt-8 text-center">
         <button
           onClick={() => navigate('/upload')}
-          className="bg-primary text-white font-bold py-3 px-8 rounded-full hover:bg-blue-800 transition-all duration-300 transform hover:scale-105 shadow-lg"
+          className="bg-blue-600 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/40"
         >
           Do Another Analysis
         </button>
