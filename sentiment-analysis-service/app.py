@@ -229,11 +229,12 @@ def analyze() -> Any:
     logger.info(f"[{req_id}] ===== Analysis Results =====")
     logger.info(f"[{req_id}] Language: {lang}")
     logger.info(f"[{req_id}] Dialect: {dialect}")
-    logger.info(f"[{req_id}] Sentiment: {sentiment['label']} (score: {sentiment['score']:.4f})")
+    logger.info(f"[{req_id}] Sentiment: {best_sentiment['label']} (score: {best_sentiment['score']:.4f})")
     logger.info(f"[{req_id}] Topics found: {len(topics)}")
     for idx, topic in enumerate(topics, 1):
         logger.info(f"[{req_id}]   Topic {idx}: {topic['topic']} (score: {topic['score']:.4f})")
-    logger.info(f"[{req_id}] Model used: {model_name}")
+    logger.info(f"[{req_id}] Model used: {best_model_name}")
+    logger.info(f"[{req_id}] Mode: {'election' if len(candidate_models) > 1 else 'single'}; Models tried: {candidate_models}")
     
     # If the request came from an HTML form, render a server-side result page
     if came_from_form:

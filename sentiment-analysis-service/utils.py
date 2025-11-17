@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import re
+import importlib
+import importlib.util
 import logging
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -124,6 +126,55 @@ def _topics_yake(text: str, lang: str = "ar", top_k: int = 5) -> List[Tuple[str,
         logger.error(f"YAKE extraction failed: {e}", exc_info=True)
         return []
 
+_MODELS_MODULE = None
+
+
+def _load_models_module():
+    """Attempt to load the local sentiment service models module regardless of cwd."""
+    global _MODELS_MODULE
+    if _MODELS_MODULE is not None:
+        return _MODELS_MODULE
+
+    service_dir = Path(__file__).resolve().parent
+    attempts = []
+
+    def _try_standard_import():
+        try:
+            import models  # type: ignore
+            return models
+        except ModuleNotFoundError as exc:
+            attempts.append(str(exc))
+            return None
+
+    module = _try_standard_import()
+    if module:
+        _MODELS_MODULE = module
+        return module
+
+    if str(service_dir) not in sys.path:
+        sys.path.insert(0, str(service_dir))
+        module = _try_standard_import()
+        if module:
+            _MODELS_MODULE = module
+            return module
+
+    models_path = service_dir / "models.py"
+    if models_path.exists():
+        spec = importlib.util.spec_from_file_location("sentiment_service_models", models_path)
+        if spec and spec.loader:
+            module = importlib.util.module_from_spec(spec)
+            try:
+                spec.loader.exec_module(module)  # type: ignore[attr-defined]
+                sys.modules["models"] = module
+                _MODELS_MODULE = module
+                return module
+            except Exception as exc:
+                attempts.append(f"importlib load failed: {exc}")
+
+    logger.error("Unable to import topic extraction dependencies: %s", "; ".join(attempts))
+    return None
+
+
 # ---------------------------
 # Topic Extraction (POS-guided for Arabic)
 # ---------------------------
@@ -175,18 +226,11 @@ def _extract_simple_topics(text: str, lang: Optional[str]) -> List[Dict[str, Any
 
 def extract_topics(text: str, lang: Optional[str], pos_tagger=None) -> List[Dict[str, Any]]:
     """POS-guided topic extraction for Arabic (noun/adj phrases), re-ranked by BERT similarity. Fallback to YAKE. Top 3 only."""
-    # Import here to avoid circular dependency and handle direct module execution
-    try:
-        from models import ARABERT_EMBEDDER, load_embedder, _get_text_embedding, ArabicPOSTagger
-    except ModuleNotFoundError:
-        service_dir = Path(__file__).resolve().parent
-        if str(service_dir) not in sys.path:
-            sys.path.append(str(service_dir))
-        try:
-            from models import ARABERT_EMBEDDER, load_embedder, _get_text_embedding, ArabicPOSTagger
-        except ModuleNotFoundError as err:
-            logger.error(f"Unable to import topic extraction dependencies: {err}")
-            return _extract_simple_topics(text, lang)
+    models_module = _load_models_module()
+    if models_module is None:
+        return _extract_simple_topics(text, lang)
+
+    from models import ARABERT_EMBEDDER, load_embedder, _get_text_embedding, ArabicPOSTagger  # type: ignore
     
     # Use provided POS tagger or create a new one
     if pos_tagger is None:
