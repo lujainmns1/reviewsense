@@ -5,6 +5,101 @@ import StarIcon from './icons/StarIcon';
 import Flag from 'react-world-flags';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSessionResults } from '../services/backendService';
+import { explainReviewLine } from '../services/geminiService';
+
+// Utility function to convert markdown to HTML
+const markdownToHtml = (text: string): string => {
+  if (!text) return '';
+  
+  let html = text;
+  
+  // First, escape any existing HTML to prevent XSS
+  const escapeHtml = (str: string) => {
+    const map: { [key: string]: string } = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    };
+    return str.replace(/[&<>"']/g, (m) => map[m]);
+  };
+  
+  // Escape HTML first
+  html = escapeHtml(html);
+  
+  // Convert **bold** to <strong>bold</strong> (handle multiple on same line)
+  html = html.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+  
+  // Convert *italic* to <em>italic</em> (only single asterisks, not part of **)
+  // Process after bold to avoid conflicts
+  html = html.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>');
+  
+  // Convert `code` to <code>code</code>
+  html = html.replace(/`([^`\n]+)`/g, '<code class="bg-white/10 px-1 py-0.5 rounded text-xs font-mono text-blue-300">$1</code>');
+  
+  // Split into lines to handle lists properly
+  const lines = html.split('\n');
+  const processedLines: string[] = [];
+  let inList = false;
+  let listType: 'ul' | 'ol' | null = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+    
+    // Check for numbered list
+    const numberedMatch = trimmedLine.match(/^(\d+)\.\s+(.+)$/);
+    if (numberedMatch) {
+      if (!inList || listType !== 'ol') {
+        if (inList && listType === 'ul') {
+          processedLines.push('</ul>');
+        }
+        processedLines.push('<ol class="list-decimal list-inside space-y-1 my-2 ml-4">');
+        inList = true;
+        listType = 'ol';
+      }
+      processedLines.push(`<li>${numberedMatch[2]}</li>`);
+      continue;
+    }
+    
+    // Check for bullet list (- or *)
+    const bulletMatch = trimmedLine.match(/^[-*]\s+(.+)$/);
+    if (bulletMatch) {
+      if (!inList || listType !== 'ul') {
+        if (inList && listType === 'ol') {
+          processedLines.push('</ol>');
+        }
+        processedLines.push('<ul class="list-disc list-inside space-y-1 my-2 ml-4">');
+        inList = true;
+        listType = 'ul';
+      }
+      processedLines.push(`<li>${bulletMatch[1]}</li>`);
+      continue;
+    }
+    
+    // Not a list item - close any open list
+    if (inList) {
+      processedLines.push(listType === 'ul' ? '</ul>' : '</ol>');
+      inList = false;
+      listType = null;
+    }
+    
+    // Regular line - convert line breaks
+    if (trimmedLine) {
+      processedLines.push(trimmedLine);
+    } else {
+      processedLines.push('<br>');
+    }
+  }
+  
+  // Close any remaining list
+  if (inList) {
+    processedLines.push(listType === 'ul' ? '</ul>' : '</ol>');
+  }
+  
+  return processedLines.join('\n');
+};
 
 interface ResultsPageProps {
   onAnalyzeAnother: () => void;
@@ -48,6 +143,10 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sentimentCounts, setSentimentCounts] = useState<{ [key in Sentiment]?: number }>({});
+  const [selectedReviewIndex, setSelectedReviewIndex] = useState<number | null>(null);
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explaining, setExplaining] = useState(false);
+  const [explanationError, setExplanationError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -83,6 +182,29 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
       setSentimentCounts(counts);
     }
   }, [results]);
+
+  const handleExplainReview = async (reviewText: string, index: number) => {
+    // If clicking the same review, close the explanation
+    if (selectedReviewIndex === index && explanation) {
+      setSelectedReviewIndex(null);
+      setExplanation(null);
+      return;
+    }
+
+    setSelectedReviewIndex(index);
+    setExplanation(null);
+    setExplanationError(null);
+    setExplaining(true);
+
+    try {
+      const explanationText = await explainReviewLine(reviewText);
+      setExplanation(explanationText);
+    } catch (err) {
+      setExplanationError(err instanceof Error ? err.message : 'Failed to explain review');
+    } finally {
+      setExplaining(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -198,39 +320,83 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
                   Model Used
                 </th>
               )}
+              <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="bg-transparent divide-y divide-white/10">
             {results.map((result, index) => (
-              <tr key={index}>
-                <td className="px-6 py-4 whitespace-normal text-sm text-slate-200">
-                  {result.reviewText}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex flex-col gap-1">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${sentimentColors[result.sentiment].bg} ${sentimentColors[result.sentiment].text} ${sentimentColors[result.sentiment].border}`}>
-                      {result.sentiment}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">
-                  {result.sentimentScore !== undefined ? result.sentimentScore.toFixed(2) : '-'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">
-                  <div className="flex flex-wrap gap-2">
-                    {result.topics.length > 0 ? result.topics.map((topic, i) => (
-                      <span key={i} className="px-2 py-1 bg-white/10 text-white rounded-md text-xs border border-white/20">
-                        {typeof topic === 'string' ? topic : topic.topic}
+              <React.Fragment key={index}>
+                <tr className={selectedReviewIndex === index ? 'bg-blue-500/10' : ''}>
+                  <td className="px-6 py-4 whitespace-normal text-sm text-slate-200">
+                    {result.reviewText}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col gap-1">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${sentimentColors[result.sentiment].bg} ${sentimentColors[result.sentiment].text} ${sentimentColors[result.sentiment].border}`}>
+                        {result.sentiment}
                       </span>
-                    )) : <span>-</span>}
-                  </div>
-                </td>
-              {isElectionMode && (
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">
-                  {formatModelName(result.modelUsed)}
-                </td>
-              )}
-              </tr>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">
+                    {result.sentimentScore !== undefined ? result.sentimentScore.toFixed(2) : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">
+                    <div className="flex flex-wrap gap-2">
+                      {result.topics.length > 0 ? result.topics.map((topic, i) => (
+                        <span key={i} className="px-2 py-1 bg-white/10 text-white rounded-md text-xs border border-white/20">
+                          {typeof topic === 'string' ? topic : topic.topic}
+                        </span>
+                      )) : <span>-</span>}
+                    </div>
+                  </td>
+                  {isElectionMode && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">
+                      {formatModelName(result.modelUsed)}
+                    </td>
+                  )}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <button
+                      onClick={() => handleExplainReview(result.reviewText, index)}
+                      disabled={explaining && selectedReviewIndex === index}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                        selectedReviewIndex === index
+                          ? 'bg-blue-600 text-white hover:bg-blue-500'
+                          : 'bg-white/10 text-slate-200 hover:bg-white/20 border border-white/20'
+                      } ${explaining && selectedReviewIndex === index ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      {explaining && selectedReviewIndex === index ? 'Explaining...' : selectedReviewIndex === index ? 'Hide Explanation' : 'Explain with AI'}
+                    </button>
+                  </td>
+                </tr>
+                {selectedReviewIndex === index && (
+                  <tr>
+                    <td colSpan={isElectionMode ? 6 : 5} className="px-6 py-4 bg-slate-800/50 border-t border-white/10">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-semibold text-blue-300">AI Explanation:</span>
+                        </div>
+                        {explaining ? (
+                          <div className="flex items-center gap-2 text-slate-300">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                            <span className="text-sm">Generating explanation...</span>
+                          </div>
+                        ) : explanationError ? (
+                          <div className="text-sm text-rose-300 bg-rose-500/10 border border-rose-400/30 rounded-lg p-3">
+                            {explanationError}
+                          </div>
+                        ) : explanation ? (
+                          <div 
+                            className="text-sm text-slate-200 bg-white/5 border border-white/10 rounded-lg p-4 leading-relaxed prose prose-invert prose-sm max-w-none"
+                            dangerouslySetInnerHTML={{ __html: markdownToHtml(explanation) }}
+                          />
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

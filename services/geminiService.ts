@@ -90,4 +90,30 @@ export const analyzeReviews = async (reviews: string[]): Promise<AnalysisResult[
   }
 };
 
+export const explainReviewLine = async (reviewText: string): Promise<string> => {
+  const prompt = `
+    Explain the following product review in detail. Provide insights about:
+    - What the reviewer is expressing (their main concerns or praises)
+    - The sentiment and emotional tone
+    - Key aspects or topics mentioned
+    - Any implicit meanings or context
+    
+    Review text: "${reviewText}"
+    
+    Provide a clear, concise explanation that helps understand the reviewer's perspective.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+
+    return response.text || "Unable to generate explanation.";
+  } catch (error) {
+    console.error("Error explaining review with Gemini API:", error);
+    throw new Error("Failed to explain review with Gemini API.");
+  }
+};
+
 
