@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from datetime import datetime
-# sql alchemy 
+
 db = SQLAlchemy()
 bcrypt = Bcrypt()
 
@@ -23,6 +23,7 @@ class AnalysisSession(db.Model):
     __tablename__ = 'analysis_sessions'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(255), nullable=True)
     country_code = db.Column(db.String(2))
     detected_dialect = db.Column(db.String(50))
     created_at = db.Column(db.DateTime(timezone=True), default=datetime.utcnow)

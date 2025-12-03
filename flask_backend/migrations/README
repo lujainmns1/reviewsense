@@ -1,1 +1,68 @@
 Single-database configuration for Flask.
+# Migration: Add Session Name Column
+
+This migration adds a `name` column to the `analysis_sessions` table to allow users to rename their analysis sessions.
+
+## Migration Options
+
+### Option 1: Using the Python Migration Script (Recommended)
+
+Run the migration script directly:
+
+```bash
+cd flask_backend
+python migrations/add_session_name_column.py
+```
+
+To rollback (if needed):
+```bash
+python migrations/add_session_name_column.py downgrade
+```
+
+### Option 2: Using Flask-Migrate
+
+If you have Flask-Migrate set up:
+
+```bash
+cd flask_backend
+flask db migrate -m "Add name column to analysis_sessions"
+flask db upgrade
+```
+
+### Option 3: Manual SQL Migration
+
+If you prefer to run SQL directly on your database:
+
+1. Connect to your PostgreSQL database
+2. Run the SQL commands from `add_session_name_manual.sql`:
+
+```sql
+ALTER TABLE analysis_sessions 
+ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+
+COMMENT ON COLUMN analysis_sessions.name IS 'User-defined name for the analysis session';
+```
+
+## Verification
+
+After running the migration, verify the column was added:
+
+```sql
+SELECT column_name, data_type, character_maximum_length, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'analysis_sessions' AND column_name = 'name';
+```
+
+You should see:
+- `column_name`: name
+- `data_type`: character varying
+- `character_maximum_length`: 255
+- `is_nullable`: YES
+
+## Notes
+
+- The `name` column is nullable, so existing sessions will have `NULL` names
+- Users can rename sessions through the frontend UI
+- The name field is optional when creating new sessions
+- Maximum length is 255 characters
+

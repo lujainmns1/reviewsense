@@ -31,7 +31,7 @@ export const analyzeReviewsWithBackend = async (
     return results;
   } catch (error) {
     console.error("Error calling backend API:", error);
-    throw new Error("Failed to analyze reviews with backend API.");
+    throw new Error("Failed to analyze reviews. Please check that the backend and Docker are running.");
   }
 };
 

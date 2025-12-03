@@ -62,3 +62,20 @@ export const getAnalysisHistory = async (userId: number, page: number = 1): Prom
 
   return response.json();
 };
+
+export const updateSessionName = async (sessionId: number, name: string, userId?: number): Promise<{ success: boolean; name: string | null }> => {
+  const response = await fetch(`${API_BASE_URL}/analysis/session/${sessionId}/name`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name, user_id: userId }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to update session name');
+  }
+
+  return response.json();
+};

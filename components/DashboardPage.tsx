@@ -1,9 +1,10 @@
-import { getAnalysisHistory } from '@/services/authService';
+import { getAnalysisHistory, updateSessionName } from '@/services/authService';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface AnalysisSession {
   session_id: number;
+  name: string | null;
   created_at: string;
   country_code: string;
   detected_dialect: string;
@@ -23,6 +24,9 @@ const DashboardPage: React.FC = () => {
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState<string>('');
+  const [renaming, setRenaming] = useState(false);
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -59,6 +63,39 @@ const DashboardPage: React.FC = () => {
     navigate(`/results/${sessionId}`);
   };
 
+  const handleStartRename = (session: AnalysisSession) => {
+    setEditingSessionId(session.session_id);
+    setEditingName(session.name || '');
+  };
+
+  const handleCancelRename = () => {
+    setEditingSessionId(null);
+    setEditingName('');
+  };
+
+  const handleSaveRename = async (sessionId: number) => {
+    if (renaming) return;
+    
+    setRenaming(true);
+    try {
+      await updateSessionName(sessionId, editingName.trim() || '', user.id);
+      // Update local state
+      setSessions(prevSessions =>
+        prevSessions.map(s =>
+          s.session_id === sessionId
+            ? { ...s, name: editingName.trim() || null }
+            : s
+        )
+      );
+      setEditingSessionId(null);
+      setEditingName('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to rename session');
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   return (
     <div className="w-full text-slate-100">
       <div className="mb-6">
@@ -73,12 +110,18 @@ const DashboardPage: React.FC = () => {
           </div>
         )}
 
-        <div className="mb-6">
+        <div className="mb-6 flex gap-3">
           <button
             onClick={handleNewAnalysis}
             className="bg-blue-500/80 text-white px-5 py-2.5 rounded-xl hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-semibold"
           >
             New Analysis
+          </button>
+          <button
+            onClick={() => navigate('/topics')}
+            className="bg-purple-500/80 text-white px-5 py-2.5 rounded-xl hover:bg-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-semibold"
+          >
+            Topic Classification
           </button>
         </div>
 
@@ -97,9 +140,53 @@ const DashboardPage: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold text-blue-300 truncate">
-                            Session #{session.session_id}
-                          </p>
+                          {editingSessionId === session.session_id ? (
+                            <div className="flex items-center gap-2 flex-1">
+                              <input
+                                type="text"
+                                value={editingName}
+                                onChange={(e) => setEditingName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleSaveRename(session.session_id);
+                                  } else if (e.key === 'Escape') {
+                                    handleCancelRename();
+                                  }
+                                }}
+                                className="flex-1 px-3 py-1 bg-slate-800 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                placeholder="Session name..."
+                                autoFocus
+                                disabled={renaming}
+                              />
+                              <button
+                                onClick={() => handleSaveRename(session.session_id)}
+                                disabled={renaming}
+                                className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {renaming ? 'Saving...' : 'Save'}
+                              </button>
+                              <button
+                                onClick={handleCancelRename}
+                                disabled={renaming}
+                                className="px-3 py-1 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 flex-1">
+                              <p className="text-sm font-semibold text-blue-300 truncate">
+                                {session.name || `Session #${session.session_id}`}
+                              </p>
+                              <button
+                                onClick={() => handleStartRename(session)}
+                                className="text-slate-400 hover:text-white text-xs px-2 py-1 rounded hover:bg-white/10 transition"
+                                title="Rename session"
+                              >
+                                ✏️
+                              </button>
+                            </div>
+                          )}
                           <div className="ml-2 flex-shrink-0 flex">
                             <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-400/30">
                               {session.reviews_count} reviews

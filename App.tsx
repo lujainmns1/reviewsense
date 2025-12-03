@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocat
 import HomePage from './components/HomePage';
 import UploadPage from './components/UploadPage';
 import ResultsPage from './components/ResultsPage';
+import TopicClassificationPage from './components/TopicClassificationPage';
 import LoginPage from './components/auth/LoginPage';
 import SignupPage from './components/auth/SignupPage';
 import DashboardPage from './components/DashboardPage';
@@ -98,6 +99,26 @@ const AppContent: React.FC = () => {
           <PrivateRoute>
             <DashboardLayout>
               <ResultsPage onAnalyzeAnother={() => navigate('/upload')} />
+            </DashboardLayout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/topics"
+        element={
+          <PrivateRoute>
+            <DashboardLayout>
+              <TopicClassificationPage />
+            </DashboardLayout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/topics/:sessionId"
+        element={
+          <PrivateRoute>
+            <DashboardLayout>
+              <TopicClassificationPage />
             </DashboardLayout>
           </PrivateRoute>
         }

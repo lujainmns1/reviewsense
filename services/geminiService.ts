@@ -112,7 +112,7 @@ export const explainReviewLine = async (reviewText: string): Promise<string> => 
     return response.text || "Unable to generate explanation.";
   } catch (error) {
     console.error("Error explaining review with Gemini API:", error);
-    throw new Error("Failed to explain review with Gemini API.");
+    throw new Error("Failed to generate AI explanation. Please check your internet connection and try again");
   }
 };
 

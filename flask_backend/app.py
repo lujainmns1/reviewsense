@@ -178,8 +178,10 @@ def analyze_using_micro_service():
             return jsonify({"error": "Reviews must be a non-empty list"}), 400
             
         # Create new analysis session (we'll update detected_dialect after getting results)
+        session_name = request.form.get('session_name')  # Optional session name
         session = AnalysisSession(
             user_id=user_id,
+            name=session_name if session_name else None,
             country_code=selected_country,
             detected_dialect=None  # Will be set after analysis
         )
@@ -400,6 +402,7 @@ def get_analysis_history(user_id):
         for session in sessions.items:
             session_data = {
                 'session_id': session.id,
+                'name': session.name,
                 'created_at': session.created_at.isoformat(),
                 'country_code': session.country_code,
                 'detected_dialect': session.detected_dialect,
@@ -427,6 +430,41 @@ def get_analysis_history(user_id):
         })
     except Exception as e:
         logger.error(f"❌ Unhandled error in /getting hisgtory: {str(e)}")
+
+@app.route('/analysis/session/<int:session_id>/name', methods=['PATCH'])
+def update_session_name(session_id):
+    try:
+        session = AnalysisSession.query.get_or_404(session_id)
+        data = request.get_json()
+        
+        # Security check: verify user owns this session
+        user_id = data.get('user_id') or request.form.get('user_id')
+        if user_id and int(user_id) != session.user_id:
+            return jsonify({"error": "Unauthorized: You can only rename your own sessions"}), 403
+        
+        if 'name' not in data:
+            return jsonify({"error": "Name field is required"}), 400
+        
+        new_name = data['name'].strip() if data['name'] else None
+        
+        # Validate name length
+        if new_name and len(new_name) > 255:
+            return jsonify({"error": "Name must be 255 characters or less"}), 400
+        
+        session.name = new_name
+        db.session.commit()
+        
+        logger.info(f"✓ Session {session_id} renamed to: {new_name or '(empty)'}")
+        
+        return jsonify({
+            "success": True,
+            "session_id": session.id,
+            "name": session.name
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Error updating session name: {str(e)}")
+        return jsonify({"error": "Failed to update session name"}), 500
 
 if __name__ == '__main__':
     print("Starting ReviewSense Flask API...")

@@ -402,7 +402,13 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onAnalyzeAnother }) => {
         </table>
       </div>
 
-      <div className="mt-8 text-center">
+      <div className="mt-8 text-center space-x-4">
+        <button
+          onClick={() => navigate(`/topics/${sessionId}`)}
+          className="bg-purple-600 text-white font-bold py-3 px-8 rounded-full hover:bg-purple-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/40"
+        >
+          View Topic Classification
+        </button>
         <button
           onClick={() => navigate('/upload')}
           className="bg-blue-600 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/40"
