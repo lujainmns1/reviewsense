@@ -530,13 +530,23 @@ class SentimentPipeline:
     def detect_language(self, text: str) -> str:
         """Detect the primary language of the text using langdetect.
 
-        Defaults to 'ar' when detection fails.  This method is
-        separated out to allow overriding or substituting with more
+        Only Arabic (ar) and English (en) are supported. Defaults to 'ar' when 
+        detection fails. Raises ValueError if an unsupported language is detected.
+        This method is separated out to allow overriding or substituting with more
         specialised detectors.
         """
         try:
             from langdetect import detect
-            return detect(text)
+            detected_lang = detect(text)
+            # Only accept Arabic and English
+            if detected_lang in ["ar", "en"]:
+                return detected_lang
+            # If unsupported language detected, raise error
+            self.logger.warning(f"Unsupported language detected: {detected_lang}. Only Arabic (ar) and English (en) are allowed.")
+            raise ValueError(f"Unsupported language detected: {detected_lang}. Only Arabic and English are allowed.")
+        except ValueError:
+            # Re-raise ValueError for unsupported languages
+            raise
         except Exception:
             return 'ar'
 
@@ -559,7 +569,12 @@ class SentimentPipeline:
         # Clean whitespace and control characters
         cleaned = text.strip()
         # Detect language (fallback to Arabic)
-        lang = self.detect_language(cleaned) or 'ar'
+        try:
+            lang = self.detect_language(cleaned) or 'ar'
+        except ValueError as e:
+            # Re-raise ValueError for unsupported languages
+            self.logger.error(f"Language validation failed: {e}")
+            raise
         # Normalise
         normalized = self.pre.normalize(cleaned)
         # Detect dialect if enabled and the language is Arabic

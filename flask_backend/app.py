@@ -35,6 +35,11 @@ migrate = Migrate(app, db)
 # Create tables
 with app.app_context():
     db.create_all()
+    # Reflect to ensure we have the latest schema (especially after migrations)
+    try:
+        db.reflect()
+    except Exception:
+        pass  # Ignore reflection errors, tables will be created by create_all()
 
 # Configure CORS
 CORS(app, resources={
@@ -206,11 +211,43 @@ def analyze_using_micro_service():
             if not isinstance(review_text, str) or not review_text.strip():
                 continue # Skip empty reviews
 
+            # Validate language - only Arabic and English are allowed
+            # Check if text contains Arabic characters
+            has_arabic = is_arabic(review_text)
+            # Use langdetect for more accurate detection if available
+            detected_lang = None
+            try:
+                from langdetect import detect
+                detected_lang = detect(review_text)
+            except Exception as e:
+                # If detection fails, use character-based fallback only if we're confident
+                # If text has Arabic characters, assume Arabic; otherwise, we can't be sure
+                if has_arabic:
+                    detected_lang = 'ar'
+                else:
+                    # If no Arabic characters and detection failed, we can't determine language reliably
+                    # Let the microservice handle the validation (it will reject if unsupported)
+                    logger.warning(f"Language detection failed for review (no Arabic chars detected): {review_text[:100]}... Error: {e}")
+                    detected_lang = None  # Will be validated by microservice
+            
+            # Validate that only Arabic or English is detected (if we got a result)
+            if detected_lang is not None and detected_lang not in ["ar", "en"]:
+                logger.error(f"Unsupported language detected: {detected_lang} for review: {review_text[:100]}...")
+                db.session.rollback()
+                return jsonify({
+                    "error": f"Unsupported language detected: {detected_lang}. Only Arabic and English languages are allowed.",
+                    "code": "unsupported_language",
+                    "detected_language": detected_lang
+                }), 400
+            
             # Create review record
+            # Use detected language if available, otherwise fallback to character-based detection
+            # Note: The microservice will perform final validation
+            review_lang = detected_lang if detected_lang else ('ar' if has_arabic else 'en')
             review = Review(
                 session_id=session.id,
                 review_text=review_text,
-                language='ar' if is_arabic(review_text) else 'en'
+                language=review_lang
             )
             db.session.add(review)
             db.session.flush()
@@ -400,9 +437,11 @@ def get_analysis_history(user_id):
 
         history = []
         for session in sessions.items:
+            # Safely get name attribute (in case column doesn't exist yet)
+            session_name = getattr(session, 'name', None)
             session_data = {
                 'session_id': session.id,
-                'name': session.name,
+                'name': session_name,
                 'created_at': session.created_at.isoformat(),
                 'country_code': session.country_code,
                 'detected_dialect': session.detected_dialect,
@@ -430,12 +469,22 @@ def get_analysis_history(user_id):
         })
     except Exception as e:
         logger.error(f"❌ Unhandled error in /getting hisgtory: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({"error": "Failed to fetch analysis history", "details": str(e)}), 500
 
 @app.route('/analysis/session/<int:session_id>/name', methods=['PATCH'])
 def update_session_name(session_id):
     try:
         session = AnalysisSession.query.get_or_404(session_id)
         data = request.get_json()
+        
+        # Check if name attribute exists (in case migration wasn't run)
+        if not hasattr(session, 'name'):
+            return jsonify({
+                "error": "Name column does not exist in database. Please run migration first.",
+                "migration_command": "python migrations/add_session_name_column.py"
+            }), 500
         
         # Security check: verify user owns this session
         user_id = data.get('user_id') or request.form.get('user_id')
@@ -464,7 +513,9 @@ def update_session_name(session_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"❌ Error updating session name: {str(e)}")
-        return jsonify({"error": "Failed to update session name"}), 500
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({"error": "Failed to update session name", "details": str(e)}), 500
 
 if __name__ == '__main__':
     print("Starting ReviewSense Flask API...")

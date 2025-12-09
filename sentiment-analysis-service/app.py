@@ -8,7 +8,7 @@ from datetime import datetime
 from flask import Flask, jsonify, request, render_template
 
 # Import models and utilities
-from sent_models import (
+from models import (
     AVAILABLE_MODELS,
     DIALECT_MODEL,
     AutoModelForSequenceClassification,
@@ -134,8 +134,29 @@ def analyze() -> Any:
     cleaned = clean_text(original_text)
     logger.info(f"[{req_id}] Cleaned text ({len(cleaned)} chars): {cleaned[:200]}...")
     
-    lang = detect_language(cleaned) or "ar"  # default to Arabic if unsure
-    logger.info(f"[{req_id}] Detected language: {lang} (confidence: {'high' if lang else 'fallback to ar'})")
+    # Detect language - returns None if detection fails, or language code (may be unsupported)
+    detected_lang = detect_language(cleaned)
+    
+    # Validate that only Arabic or English languages are accepted
+    if detected_lang is None:
+        # Language detection failed - we cannot determine the language
+        logger.error(f"[{req_id}] Language detection failed. Unable to determine language. Only Arabic and English are supported.")
+        return jsonify({
+            "error": "The input language is not supported. Only Arabic and English languages are allowed.",
+            "code": "language_detection_failed"
+        }), 400
+    
+    if detected_lang not in ["ar", "en"]:
+        # Unsupported language detected
+        logger.error(f"[{req_id}] Unsupported language detected: {detected_lang}. Only Arabic (ar) and English (en) are allowed.")
+        return jsonify({
+            "error": f"The input language is not supported. Detected language: {detected_lang}. Only Arabic and English languages are allowed.",
+            "code": "unsupported_language",
+            "detected_language": detected_lang
+        }), 400
+    
+    lang = detected_lang
+    logger.info(f"[{req_id}] Detected language: {lang}")
 
     def run_model(candidate_name: str):
         """Run sentiment model with fallback handling."""

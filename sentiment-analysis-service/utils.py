@@ -72,10 +72,23 @@ def clean_text(text: str) -> str:
     return text
 
 def detect_language(text: str) -> Optional[str]:
+    """Detect the language of the text. Only Arabic (ar) and English (en) are supported.
+    
+    Returns:
+        Language code ('ar' or 'en') if detected and supported, 
+        the detected language code if unsupported (for error reporting),
+        None if detection fails.
+    """
     if langdetect is None:
         return None
     try:
-        return langdetect.detect(text)
+        detected_lang = langdetect.detect(text)
+        # Only accept Arabic and English
+        if detected_lang in ["ar", "en"]:
+            return detected_lang
+        # If unsupported language detected, return it so we can show it in error message
+        logger.warning(f"Unsupported language detected: {detected_lang}. Only Arabic (ar) and English (en) are allowed.")
+        return detected_lang  # Return it so we can show it in the error message
     except Exception:
         return None
 
