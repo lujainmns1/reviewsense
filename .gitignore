@@ -70,7 +70,11 @@ env/
 *.dylib
 *.o
 *.a
-
+*.env
+.env
 # Ignore test result files
 *.coverage
 *.pytest_cache/
+*.env*
+fask_backend/.env
+.env

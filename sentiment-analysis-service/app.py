@@ -8,7 +8,7 @@ from datetime import datetime
 from flask import Flask, jsonify, request, render_template
 
 # Import models and utilities
-from models import (
+from sent_models import (
     AVAILABLE_MODELS,
     DIALECT_MODEL,
     AutoModelForSequenceClassification,
